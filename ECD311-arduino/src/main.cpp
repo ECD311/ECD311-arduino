@@ -61,14 +61,18 @@ int LIMIT_SIG_2 = 47; // Limit Switch 2(CHECK if elev or Azi)
 int InverterDisable = 30;
 //Global Variables
 //Sensors
-float Temp = 0;
-float Humid = 0;
-int PanelCurrent = 0;
-int BatteryVoltage = 0;
-int WindSpeed = 0;
-float MeasuredAzimuth = 0.0; // AKA Yaw or Heading
-float MeasuredElevation = 0.0; // AKA Zenith or Pitch
-float MeasuredRoll = 0.0; // Unused, solar panels don't roll
+double Temp = 0;
+double Humid = 0;
+double PanelCurrent = 0;
+double BatteryCurrent = 0;
+double LoadCurrent = 0;
+double BatteryTotalVoltage = 0;
+double PanelVoltage = 0;
+double BatteryOneVoltage = 0;
+double WindSpeed = 0;
+double MeasuredAzimuth = 0.0; // AKA Yaw or Heading
+double MeasuredElevation = 0.0; // AKA Zenith or Pitch
+double MeasuredRoll = 0.0; // Unused, solar panels don't roll
 //Motors
 int M1Running = 0;
 int M2Running = 0; 
@@ -177,7 +181,7 @@ void loop() {
   else if(Completed == 1 || (LIMIT_SIG_1 == 1 || LIMIT_SIG_2 == 1)){
     State = 1;
   }
-  else if(BatteryVoltage < 20){ //Voltage level is an estimate of charge, must determine the voltage to determine the charge. Current val is a placeholder
+  else if(BatteryTotalVoltage < 20){ //Voltage level is an estimate of charge, must determine the voltage to determine the charge. Current val is a placeholder
     State = 2;
   }
   else if(MyDateAndTime.Minute%30 == 0){
@@ -243,17 +247,17 @@ void loop() {
 void Voltages() {
     // Read the input on analog pin(s)
     // Convert the analog readings (which range from 0 - 1023) to a voltage (0 - 5V)
-    BatteryVoltage = analogRead(SP_VOLT) * (55/1023); // max 55V
-    BatteryVoltage = analogRead(BATT24_VOLT) * (55/1023); // max 55V 
-    BatteryVoltage = analogRead(BATT12_VOLT) * (55/1023); // max 55V
+    PanelVoltage = analogRead(SP_VOLT) * (55/1023); // max 55V
+    BatteryTotalVoltage = analogRead(BATT24_VOLT) * (55/1023); // max 55V 
+    BatteryOneVoltage = analogRead(BATT12_VOLT) * (55/1023); // max 55V
 }
 
 void Currents() {
     // Get running average of current measurements
     //PanelCurrent = (PanelCurrent + PanelSensor.getCurrentDC()) / 2; //This is how the previous code did it, but we got it working without
     PanelCurrent = analogRead(SP_CUR)*(5/1023);
-    PanelCurrent = analogRead(BATT_CUR)*(5/1023);
-    PanelCurrent = analogRead(LOAD_CUR)*(5/1023);
+    BatteryCurrent = analogRead(BATT_CUR)*(5/1023);
+    LoadCurrent = analogRead(LOAD_CUR)*(5/1023);
 }
 
 void TempAndHumid() {
@@ -403,8 +407,93 @@ void CheckLimitSwitches(){
   }
 }
 
-void TransferPiData(){
-  //ADD: Send sensor data
+void TransferPiData() {
+    char system_status[25];
+    if (State == 1) {
+        sprintf(system_status, "Maintenance");
+    } else if (State == 2) {
+        sprintf(system_status, "High Wind");
+    } else if (State == 3) {
+        sprintf(system_status, "Low Battery");
+    } else if (State == 4) {
+        sprintf(system_status, "Cold Weather");
+    } else if (State == 5) {
+        sprintf(system_status, "Overnight");
+    } else {
+        sprintf(system_status, "Normal");
+    }
+
+    char AzimMode[25];
+    if (State == 0) {
+        sprintf(AzimMode, "Automatic");
+    } else {
+        sprintf(AzimMode, "Manual");
+    }
+
+    char AzimStatus[25];
+    if (M1Running == 1) {
+        if (digitalRead(M1_DIR)) {
+            sprintf(AzimStatus, "CCW");
+        } else {
+            sprintf(AzimStatus, "CW");
+        }
+    } else {
+        sprintf(AzimStatus, "OFF");
+    }
+
+    char ElevMode[25];
+    if (State == 0) {
+        sprintf(ElevMode, "Automatic");
+    } else {
+        sprintf(ElevMode, "Manual");
+    }
+    char ElevStatus[25];
+    if (M2Running == 1) {
+        if (digitalRead(M2_DIR)) {
+            sprintf(ElevStatus, "CCW");
+        } else {
+            sprintf(ElevStatus, "CW");
+        }
+    } else {
+        sprintf(ElevStatus, "OFF");
+    }
+    char date_time[32];
+    DateTime current_time;
+    current_time = Clock.read();
+    sprintf(date_time, "20%i-%i-%i_%i:%i:%i", current_time.Year, current_time.Month, current_time.Day, current_time.Hour, current_time.Minute, current_time.Second);
+    // sprintf(date_time, "2022-02-20_02:55:32");
+    Serial.println("LOG");
+    char buffer[1024];
+    sprintf(
+        buffer,
+        "{'Date_Time': %s, 'System_Status': %s, 'Solar_Panel_Voltage': %f, "
+        "'Solar_Panel_Current': %f, 'Solar_Panel_Power': %f, "
+        "'Battery_One_Voltage': %f, 'Battery_Two_Voltage': %f, "
+        "'Battery_Total_Voltage': %f, 'Battery_Total_Current': %f, "
+        "'Battery_Power' : %f, "
+        "'Load_Voltage': %f, 'Load_Current': %f, 'Load_Power': %f, "
+        "'Inverter_Voltage': %f, 'Inverter_Current': %f, 'Inverter_Power': %f, "
+        "'Motor_One_Voltage': %f, 'Motor_One_Current': %f, 'Motor_One_Power': "
+        "%f, 'Motor_Two_Voltage': %f, 'Motor_Two_Current': %f, "
+        "'Motor_Two_Power': %f, 'Five_Volt_Voltage': %f, 'Five_Volt_Current': "
+        "%f, 'Five_Volt_Power': %f, 'Windspeed': %f, 'Outdoor_Temp': %f, "
+        "'Outdoor_Humidity': %f, 'Azimuth_Reading': %f, 'Azimuth_Command': %f, "
+        "'Azimuth_Motor_Mode': %s, 'Azimuth_Motor_Status': %s, "
+        "'Elevation_Reading': %f, 'Elevation_Command': %f, "
+        "'Elevation_Motor_Mode': %s, 'Elevation_Motor_Status': %s}",
+        date_time, system_status, PanelVoltage,
+        PanelCurrent, PanelVoltage * PanelCurrent,
+        BatteryOneVoltage, BatteryTotalVoltage - BatteryOneVoltage,
+        BatteryTotalVoltage, BatteryCurrent,
+        BatteryTotalVoltage * BatteryCurrent, BatteryTotalVoltage, LoadCurrent,
+        BatteryTotalVoltage * LoadCurrent, BatteryTotalVoltage, LoadCurrent,
+        BatteryTotalVoltage * LoadCurrent, BatteryTotalVoltage, MotorOneCurrent,
+        BatteryTotalVoltage * MotorOneCurrent, BatteryTotalVoltage, MotorTwoCurrent,
+        BatteryTotalVoltage * MotorTwoCurrent, FiveVoltVoltage, FiveVoltCurrent,
+        FiveVoltVoltage * FiveVoltCurrent, WindSpeed, Temp,
+        Humid, MeasuredAzimuth, AzimuthCommand, AzimMode, AzimStatus,
+        MeasuredElevation, ElevationCommand, ElevMode, ElevStatus);
+    Serial.println(buffer);
 }
 
 void ReceivePiData(){
