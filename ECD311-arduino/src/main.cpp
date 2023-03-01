@@ -469,29 +469,20 @@ void TransferPiData() {
         "{'Date_Time': %s, 'System_Status': %s, 'Solar_Panel_Voltage': %f, "
         "'Solar_Panel_Current': %f, 'Solar_Panel_Power': %f, "
         "'Battery_One_Voltage': %f, 'Battery_Two_Voltage': %f, "
-        "'Battery_Total_Voltage': %f, 'Battery_Total_Current': %f, "
-        "'Battery_Power' : %f, "
+        "'Battery_Total_Voltage': %f, 'Battery_Total_Power' : %f, "
         "'Load_Voltage': %f, 'Load_Current': %f, 'Load_Power': %f, "
-        "'Inverter_Voltage': %f, 'Inverter_Current': %f, 'Inverter_Power': %f, "
-        "'Motor_One_Voltage': %f, 'Motor_One_Current': %f, 'Motor_One_Power': "
-        "%f, 'Motor_Two_Voltage': %f, 'Motor_Two_Current': %f, "
-        "'Motor_Two_Power': %f, 'Five_Volt_Voltage': %f, 'Five_Volt_Current': "
-        "%f, 'Five_Volt_Power': %f, 'Windspeed': %f, 'Outdoor_Temp': %f, "
+        "'Windspeed': %f, 'Outdoor_Temp': %f, "
         "'Outdoor_Humidity': %f, 'Azimuth_Reading': %f, 'Azimuth_Command': %f, "
         "'Azimuth_Motor_Mode': %s, 'Azimuth_Motor_Status': %s, "
         "'Elevation_Reading': %f, 'Elevation_Command': %f, "
         "'Elevation_Motor_Mode': %s, 'Elevation_Motor_Status': %s}",
-        date_time, system_status, PanelVoltage,
-        PanelCurrent, PanelVoltage * PanelCurrent,
-        BatteryOneVoltage, BatteryTotalVoltage - BatteryOneVoltage,
-        BatteryTotalVoltage, BatteryCurrent,
+        date_time, system_status, PanelVoltage, PanelCurrent,
+        PanelVoltage * PanelCurrent, BatteryOneVoltage,
+        BatteryTotalVoltage - BatteryOneVoltage, BatteryTotalVoltage,
         BatteryTotalVoltage * BatteryCurrent, BatteryTotalVoltage, LoadCurrent,
         BatteryTotalVoltage * LoadCurrent, BatteryTotalVoltage, LoadCurrent,
-        BatteryTotalVoltage * LoadCurrent, BatteryTotalVoltage, MotorOneCurrent,
-        BatteryTotalVoltage * MotorOneCurrent, BatteryTotalVoltage, MotorTwoCurrent,
-        BatteryTotalVoltage * MotorTwoCurrent, FiveVoltVoltage, FiveVoltCurrent,
-        FiveVoltVoltage * FiveVoltCurrent, WindSpeed, Temp,
-        Humid, MeasuredAzimuth, AzimuthCommand, AzimMode, AzimStatus,
+        BatteryTotalVoltage * LoadCurrent, WindSpeed, Temp, Humid,
+        MeasuredAzimuth, AzimuthCommand, AzimMode, AzimStatus,
         MeasuredElevation, ElevationCommand, ElevMode, ElevStatus);
     Serial.println(buffer);
 }
