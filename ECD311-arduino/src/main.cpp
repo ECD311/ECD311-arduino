@@ -29,14 +29,12 @@ DS3231_Simple Clock;
 DateTime MyDateAndTime;
 // Pins
 //Analog
-int SP_CUR = A0; // Solar Panel Current
-int BATT_CUR = A1; // Battery Current
-int LOAD_CUR = A2; // Load Current
+ACS712  SP_CUR(A0, 5.0, 1023, 100); // Solar Panel Current
+ACS712  BATT_CUR(A1, 5.0, 1023, 100); // Battery Current
+ACS712  LOAD_CUR(A2, 5.0, 1023, 100); // Load Current
 int SP_VOLT = A3; // Voltage of Solar Panel
 int BATT24_VOLT = A4; // Voltage of both batteries
-int BATT12_VOLT = A5; // Voltage of 1st batteries
-//ACS712 PanelSensor(ACS712_20A, A1); //This is how the previous code did it, but we got it working without
-//insert other current sensor inputs here
+int BATT12_VOLT = A5; // Voltage of 1st battery
 int W_SIG = A14;  // Wind Meter (Anenometer)
 //Digital
 //Manual Controls for both Motors
@@ -252,9 +250,9 @@ void Currents() {
     // Get running average of current measurements
     // PanelCurrent = (PanelCurrent + PanelSensor.getCurrentDC()) / 2; //This is
     // how the previous code did it, but we got it working without
-    PanelCurrent = analogRead(SP_CUR) * (5 / 1023);
-    BatteryCurrent = analogRead(BATT_CUR) * (5 / 1023);
-    LoadCurrent = analogRead(LOAD_CUR) * (5 / 1023);
+    PanelCurrent = SP_CUR.mA_DC();
+    BatteryCurrent = BATT_CUR.mA_DC();
+    LoadCurrent = LOAD_CUR.mA_DC();
 }
 
 void TempAndHumid() {
