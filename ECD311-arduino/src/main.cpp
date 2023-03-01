@@ -7,11 +7,6 @@
 #include <SparkFunLSM9DS1.h>  // Library for accelerometer and compass
 #include <Wire.h>             // Library for I2C communication
 
-/*
- * FIX ALL PIN LOCATIONS
- * CHECK MOTOR1/MOTOR2/ELEV/AZI
- */
-
 // Non-Pin Setup for Components
 // Pure Inputs
 // Temperature/Humidity Sensor
@@ -33,43 +28,43 @@ LSM9DS1 accelComp;
 DS3231_Simple Clock;
 DateTime MyDateAndTime;
 // Pins
-// Analog
-int SP_CUR = A0;       // Solar Panel Current
-int BATT_CUR = A1;     // Battery Current
-int LOAD_CUR = A2;     // Load Current
-int SP_VOLT = A3;      // Voltage of Solar Panel
-int BATT24_VOLT = A4;  // Voltage of both batteries
-int BATT12_VOLT = A5;  // Voltage of 1st batteries
-// ACS712 PanelSensor(ACS712_20A, A1); //This is how the previous code did it,
-// but we got it working without insert other current sensor inputs here
-int W_SIG = A15;  // Wind Meter (Anenometer)
-// Digital
-// Manual Controls for both Motors
-int MANUAL = 2;  // Activates Motor Manual mode
-int M2_EAST = 3;
-int M2_WEST = 4;
-int M1_UP = 5;
-int M1_DN = 6;
-// Motor Driver Inputs
-int M1_PUL = 40;
-int M1_DIR = 41;
-int M2_PUL = 42;
-int M2_DIR = 43;
-int LIMIT_SIG_1 = 46;  // Limit Switch 1(CHECK if elev or Azi)
-int LIMIT_SIG_2 = 47;  // Limit Switch 2(CHECK if elev or Azi)
+//Analog
+int SP_CUR = A0; // Solar Panel Current
+int BATT_CUR = A1; // Battery Current
+int LOAD_CUR = A2; // Load Current
+int SP_VOLT = A3; // Voltage of Solar Panel
+int BATT24_VOLT = A4; // Voltage of both batteries
+int BATT12_VOLT = A5; // Voltage of 1st batteries
+//ACS712 PanelSensor(ACS712_20A, A1); //This is how the previous code did it, but we got it working without
+//insert other current sensor inputs here
+int W_SIG = A14;  // Wind Meter (Anenometer)
+//Digital
+//Manual Controls for both Motors
+int MANUAL = 18;  // Activates Motor Manual mode
+int M2_EAST = 17;  
+int M2_WEST = 16;  
+int M1_UP = 15;  
+int M1_DN = 14;
+//Motor Driver Inputs
+int M1_PUL = 13;
+int M1_DIR = 12;
+int M2_PUL = 4;
+int M2_DIR = 3;
+int LIMIT_SIG_1 = 9;  // Limit Switch 1(CHECK if elev or Azi)
+int LIMIT_SIG_2 = 8;  // Limit Switch 2(CHECK if elev or Azi)
 // Other
 int InverterDisable = 30;
 // Global Variables
 // Sensors
-double Temp = 0;
-double Humid = 0;
-double PanelCurrent = 0;
-double BatteryCurrent = 0;
-double LoadCurrent = 0;
-double BatteryTotalVoltage = 0;
-double PanelVoltage = 0;
-double BatteryOneVoltage = 0;
-double WindSpeed = 0;
+double Temp = 0.0;
+double Humid = 0.0;
+double PanelCurrent = 0.0;
+double BatteryCurrent = 0.0;
+double LoadCurrent = 0.0;
+double BatteryTotalVoltage = 0.0;
+double PanelVoltage = 0.0;
+double BatteryOneVoltage = 0.0;
+double WindSpeed = 0.0;
 double MeasuredAzimuth = 0.0;    // AKA Yaw or Heading
 double MeasuredElevation = 0.0;  // AKA Zenith or Pitch
 double MeasuredRoll = 0.0;       // Unused, solar panels don't roll
@@ -160,10 +155,8 @@ void loop() {
 
     // Send Data to Pi
     MyDateAndTime = Clock.read();
-    if (MyDateAndTime.Minute % 2 ==
-        0) {  // Transfer data every 2min CHECK: if this is the desired interval
-        if (PiComm ==
-            0) {  // Prevents data being transferred multiple times in a row
+    if (MyDateAndTime.Minute % 2 == 0) {  // Transfer data every 2min CHECK: if this is the desired interval
+        if (PiComm == 0) {  // Prevents data being transferred multiple times in a row
             TransferPiData();
             ReceivePiData();
             PiComm = 1;
@@ -296,7 +289,6 @@ void Attitude(float ax, float ay, float az, float mx, float my, float mz) {
     MeasuredRoll = atan2(ay, az);
     MeasuredElevation = atan2(-ax, sqrt(ay * ay + az * az));
 
-    MeasuredAzimuth;
     if (my == 0)
         MeasuredAzimuth = (mx < 0) ? PI : 0;
     else
