@@ -34,13 +34,13 @@ DS3231_Simple Clock;
 DateTime MyDateAndTime;
 // Pins
 // Analog
-ACS712 SP_CUR(A0); // Solar Panel current sensor
-ACS712 BATT_CUR(A1); // Battery current sensor
-ACS712 LOAD_CUR(A2); // Load current sensor
+ACS712 SP_CUR(A0);     // Solar Panel current sensor
+ACS712 BATT_CUR(A1);   // Battery current sensor
+ACS712 LOAD_CUR(A2);   // Load current sensor
 int SP_VOLT = A3;      // Voltage of Solar Panel
 int BATT24_VOLT = A4;  // Voltage of both batteries
 int BATT12_VOLT = A5;  // Voltage of 1st batteries
-int W_SIG = A15;  // Wind Meter (Anenometer)
+int W_SIG = A15;       // Wind Meter (Anenometer)
 // Digital
 // Manual Controls for both Motors
 int MANUAL = 2;  // Activates Motor Manual mode
@@ -488,7 +488,13 @@ void TransferPiData() {
     Serial.println(buffer);
 }
 
-void ReceivePiData() {
+void ReceivePiData(int suntime) {
     // ADD: Could try to get weather data to predict rain,snow, cloudy weather,
     // azimuth, elevation
+    Serial.println("new_position");
+    // actually receive data from raspi, azimuth then altitude in degrees
+    if (suntime == 1) {
+        Serial.println("new_times");
+        // actually receive data from raspi, sunrise then sunset in HH:MM:SS
+    }
 }
