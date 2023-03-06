@@ -71,6 +71,8 @@ double WindSpeed = 0;
 double MeasuredAzimuth = 0.0;    // AKA Yaw or Heading
 double MeasuredElevation = 0.0;  // AKA Zenith or Pitch
 double MeasuredRoll = 0.0;       // Unused, solar panels don't roll
+double AzimuthCommand = 0.0;
+double ElevationCommand = 0.0;
 // Motors
 int M1Running = 0;
 int M2Running = 0;
@@ -110,7 +112,7 @@ void ManualControl();
 void CheckLimitSwitches();
 void CheckLimitElev();
 void TransferPiData();
-void ReceivePiData();
+void ReceivePiData(int suntime);
 
 void setup() {
     Serial.begin(9600);  // Serial for printing output
@@ -163,7 +165,7 @@ void loop() {
         if (PiComm ==
             0) {  // Prevents data being transferred multiple times in a row
             TransferPiData();
-            ReceivePiData();
+            ReceivePiData(1);
             PiComm = 1;
         }
     } else {
@@ -237,7 +239,7 @@ void loop() {
             MoveSPElev(SouthElev);
             MoveSPAzi(SouthAzi);
         case 7:  // Angle Towards Sun
-            int a = 0;
+            break;
             // Use values taken from Pi
             // MoveSPElev(float Elev);
             // MoveSPAzi(float Azi);
@@ -292,7 +294,6 @@ void Attitude(float ax, float ay, float az, float mx, float my, float mz) {
     MeasuredRoll = atan2(ay, az);
     MeasuredElevation = atan2(-ax, sqrt(ay * ay + az * az));
 
-    MeasuredAzimuth;
     if (my == 0)
         MeasuredAzimuth = (mx < 0) ? PI : 0;
     else
@@ -477,14 +478,16 @@ void TransferPiData() {
         "'Azimuth_Motor_Mode': %s, 'Azimuth_Motor_Status': %s, "
         "'Elevation_Reading': %f, 'Elevation_Command': %f, "
         "'Elevation_Motor_Mode': %s, 'Elevation_Motor_Status': %s}",
-        date_time, system_status, PanelVoltage, PanelCurrent,
-        PanelVoltage * PanelCurrent, BatteryOneVoltage,
-        BatteryTotalVoltage - BatteryOneVoltage, BatteryTotalVoltage,
-        BatteryTotalVoltage * BatteryCurrent, BatteryTotalVoltage, LoadCurrent,
-        BatteryTotalVoltage * LoadCurrent, BatteryTotalVoltage, LoadCurrent,
-        BatteryTotalVoltage * LoadCurrent, WindSpeed, Temp, Humid,
-        MeasuredAzimuth, AzimuthCommand, AzimMode, AzimStatus,
-        MeasuredElevation, ElevationCommand, ElevMode, ElevStatus);
+        date_time, system_status, PanelVoltage, 
+        PanelCurrent, PanelVoltage * PanelCurrent, 
+        BatteryOneVoltage, BatteryTotalVoltage - BatteryOneVoltage, 
+        BatteryTotalVoltage, BatteryTotalVoltage * BatteryCurrent, 
+        BatteryTotalVoltage, LoadCurrent, BatteryTotalVoltage * LoadCurrent, 
+        WindSpeed, Temp, 
+        Humid, MeasuredAzimuth, AzimuthCommand, 
+        AzimMode, AzimStatus,
+        MeasuredElevation, ElevationCommand,
+        ElevMode, ElevStatus);
     Serial.println(buffer);
 }
 
