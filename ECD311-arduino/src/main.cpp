@@ -499,19 +499,15 @@ void ReceivePiData(int suntime) {
     // azimuth, elevation
     char AziBuffer[8];
     Serial.println("new_position");
-    Serial.readBytes(AziBuffer,4);
+    Serial.readBytes(AziBuffer,2);
     Serial.println(AziBuffer);
-    AzimuthCommand |= AziBuffer[0]<<24;
-    AzimuthCommand |= AziBuffer[1]<<16;
-    AzimuthCommand |= AziBuffer[2]<<8;
-    AzimuthCommand |= AziBuffer[3]<<0;
+    AzimuthCommand |= AziBuffer[0]<<8;
+    AzimuthCommand |= AziBuffer[1]<<0;
     char ElevBuffer[8];
     Serial.println("new_position");
-    Serial.readBytes(ElevBuffer,4);
-    ElevationCommand |= ElevBuffer[0]<<24;
-    ElevationCommand |= ElevBuffer[1]<<16;
-    ElevationCommand |= ElevBuffer[2]<<8;
-    ElevationCommand |= ElevBuffer[3]<<0;
+    Serial.readBytes(ElevBuffer,2);
+    ElevationCommand |= ElevBuffer[0]<<8;
+    ElevationCommand |= ElevBuffer[1]<<0;
     Serial.println(ElevBuffer);
     // actually receive data from raspi, azimuth then altitude in degrees
     if (suntime == 1) { //CHANGE
