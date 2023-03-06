@@ -71,8 +71,6 @@ double WindSpeed = 0;
 double MeasuredAzimuth = 0.0;    // AKA Yaw or Heading
 double MeasuredElevation = 0.0;  // AKA Zenith or Pitch
 double MeasuredRoll = 0.0;       // Unused, solar panels don't roll
-double AzimuthCommand = 0.0;
-double ElevationCommand = 0.0;
 // Motors
 int M1Running = 0;
 int M2Running = 0;
@@ -112,7 +110,7 @@ void ManualControl();
 void CheckLimitSwitches();
 void CheckLimitElev();
 void TransferPiData();
-void ReceivePiData(int suntime);
+void ReceivePiData();
 
 void setup() {
     Serial.begin(9600);  // Serial for printing output
@@ -179,7 +177,7 @@ void loop() {
     // the solar panel from switching States too often ADD: Maybe also have the
     // State only be triggered after multiple checks, to avoid accidently
     // putting it in a wrong mode
-
+    /*
     if (digitalRead(MANUAL) == HIGH) {
         State = 0;
     } else if (Completed == 1 || (LIMIT_SIG_1 == 1 || LIMIT_SIG_2 == 1)) {
@@ -239,11 +237,12 @@ void loop() {
             MoveSPElev(SouthElev);
             MoveSPAzi(SouthAzi);
         case 7:  // Angle Towards Sun
-            break;
+            int a = 0;
             // Use values taken from Pi
             // MoveSPElev(float Elev);
             // MoveSPAzi(float Azi);
     }
+    */
 }
 
 void Voltages() {
@@ -294,6 +293,7 @@ void Attitude(float ax, float ay, float az, float mx, float my, float mz) {
     MeasuredRoll = atan2(ay, az);
     MeasuredElevation = atan2(-ax, sqrt(ay * ay + az * az));
 
+    MeasuredAzimuth;
     if (my == 0)
         MeasuredAzimuth = (mx < 0) ? PI : 0;
     else
@@ -468,36 +468,40 @@ void TransferPiData() {
     char buffer[1024];
     sprintf(
         buffer,
-        "{'Date_Time': %s, 'System_Status': %s, 'Solar_Panel_Voltage': %f, "
+        "{'Date_Time': '%s', 'System_Status': '%s', 'Solar_Panel_Voltage': %f, "
         "'Solar_Panel_Current': %f, 'Solar_Panel_Power': %f, "
         "'Battery_One_Voltage': %f, 'Battery_Two_Voltage': %f, "
         "'Battery_Total_Voltage': %f, 'Battery_Total_Power' : %f, "
         "'Load_Voltage': %f, 'Load_Current': %f, 'Load_Power': %f, "
         "'Windspeed': %f, 'Outdoor_Temp': %f, "
         "'Outdoor_Humidity': %f, 'Azimuth_Reading': %f, 'Azimuth_Command': %f, "
-        "'Azimuth_Motor_Mode': %s, 'Azimuth_Motor_Status': %s, "
+        "'Azimuth_Motor_Mode': '%s', 'Azimuth_Motor_Status': '%s', "
         "'Elevation_Reading': %f, 'Elevation_Command': %f, "
-        "'Elevation_Motor_Mode': %s, 'Elevation_Motor_Status': %s}",
-        date_time, system_status, PanelVoltage, 
-        PanelCurrent, PanelVoltage * PanelCurrent, 
-        BatteryOneVoltage, BatteryTotalVoltage - BatteryOneVoltage, 
-        BatteryTotalVoltage, BatteryTotalVoltage * BatteryCurrent, 
-        BatteryTotalVoltage, LoadCurrent, BatteryTotalVoltage * LoadCurrent, 
-        WindSpeed, Temp, 
-        Humid, MeasuredAzimuth, AzimuthCommand, 
-        AzimMode, AzimStatus,
-        MeasuredElevation, ElevationCommand,
-        ElevMode, ElevStatus);
+        "'Elevation_Motor_Mode': '%s', 'Elevation_Motor_Status': '%s'}",
+        date_time, system_status, PanelVoltage, PanelCurrent,
+        PanelVoltage * PanelCurrent, BatteryOneVoltage,
+        BatteryTotalVoltage - BatteryOneVoltage, BatteryTotalVoltage,
+        BatteryTotalVoltage * BatteryCurrent, BatteryTotalVoltage, LoadCurrent,
+        BatteryTotalVoltage * LoadCurrent, BatteryTotalVoltage, LoadCurrent,
+        BatteryTotalVoltage * LoadCurrent, WindSpeed, Temp, Humid,
+        MeasuredAzimuth, AzimuthCommand, AzimMode, AzimStatus,
+        MeasuredElevation, ElevationCommand, ElevMode, ElevStatus);
     Serial.println(buffer);
 }
 
 void ReceivePiData(int suntime) {
     // ADD: Could try to get weather data to predict rain,snow, cloudy weather,
     // azimuth, elevation
+    char buffertwo[8];
     Serial.println("new_position");
+    Serial.readBytes(buffertwo,6);
+    Serial.println(buffertwo);
     // actually receive data from raspi, azimuth then altitude in degrees
     if (suntime == 1) {
+        char bufferthree[64];
         Serial.println("new_times");
+        Serial.readBytes(bufferthree,40);
+        Serial.println(bufferthree);
         // actually receive data from raspi, sunrise then sunset in HH:MM:SS
     }
 }
