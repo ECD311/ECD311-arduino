@@ -478,14 +478,16 @@ void TransferPiData() {
         "'Azimuth_Motor_Mode': '%s', 'Azimuth_Motor_Status': '%s', "
         "'Elevation_Reading': %f, 'Elevation_Command': %f, "
         "'Elevation_Motor_Mode': '%s', 'Elevation_Motor_Status': '%s'}",
-        date_time, system_status, PanelVoltage, PanelCurrent,
-        PanelVoltage * PanelCurrent, BatteryOneVoltage,
-        BatteryTotalVoltage - BatteryOneVoltage, BatteryTotalVoltage,
-        BatteryTotalVoltage * BatteryCurrent, BatteryTotalVoltage, LoadCurrent,
-        BatteryTotalVoltage * LoadCurrent, BatteryTotalVoltage, LoadCurrent,
-        BatteryTotalVoltage * LoadCurrent, WindSpeed, Temp, Humid,
-        MeasuredAzimuth, AzimuthCommand, AzimMode, AzimStatus,
-        MeasuredElevation, ElevationCommand, ElevMode, ElevStatus);
+        date_time, system_status, PanelVoltage, 
+        PanelCurrent, PanelVoltage * PanelCurrent, 
+        BatteryOneVoltage, BatteryTotalVoltage - BatteryOneVoltage, 
+        BatteryTotalVoltage, BatteryTotalVoltage * BatteryCurrent, 
+        BatteryTotalVoltage, LoadCurrent, BatteryTotalVoltage * LoadCurrent, 
+        WindSpeed, Temp, 
+        Humid, MeasuredAzimuth, AzimuthCommand, 
+        AzimMode, AzimStatus,
+        MeasuredElevation, ElevationCommand,
+        ElevMode, ElevStatus);
     Serial.println(buffer);
 }
 
