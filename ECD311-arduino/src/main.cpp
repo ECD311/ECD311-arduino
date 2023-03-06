@@ -83,6 +83,10 @@ int Night = 0;
 int Completed = 0;
 // Data Transfer
 int PiComm = 0;
+int SolarAzimuth = 0;
+int SolarElevation= 0;
+int Sunset = 0;
+int Sunrise = 0; 
 // Definitions
 // ADD: Must determine proper defintion values experimentally
 #define ElevRange 5.0
@@ -153,6 +157,7 @@ void loop() {
     Currents();
     TempAndHumid();
     Wind();
+
     Attitude(accelComp.ax, accelComp.ay, accelComp.az, accelComp.mx,
              accelComp.my, accelComp.mz);
 
@@ -492,12 +497,24 @@ void TransferPiData() {
 void ReceivePiData(int suntime) {
     // ADD: Could try to get weather data to predict rain,snow, cloudy weather,
     // azimuth, elevation
-    char buffertwo[8];
+    char AziBuffer[8];
     Serial.println("new_position");
-    Serial.readBytes(buffertwo,6);
-    Serial.println(buffertwo);
+    Serial.readBytes(AziBuffer,4);
+    Serial.println(AziBuffer);
+    AzimuthCommand |= AziBuffer[0]<<24;
+    AzimuthCommand |= AziBuffer[1]<<16;
+    AzimuthCommand |= AziBuffer[2]<<8;
+    AzimuthCommand |= AziBuffer[3]<<0;
+    char ElevBuffer[8];
+    Serial.println("new_position");
+    Serial.readBytes(ElevBuffer,4);
+    ElevationCommand |= ElevBuffer[0]<<24;
+    ElevationCommand |= ElevBuffer[1]<<16;
+    ElevationCommand |= ElevBuffer[2]<<8;
+    ElevationCommand |= ElevBuffer[3]<<0;
+    Serial.println(ElevBuffer);
     // actually receive data from raspi, azimuth then altitude in degrees
-    if (suntime == 1) {
+    if (suntime == 1) { //CHANGE
         char bufferthree[64];
         Serial.println("new_times");
         Serial.readBytes(bufferthree,40);
