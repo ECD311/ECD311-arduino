@@ -71,6 +71,8 @@ double WindSpeed = 0;
 double MeasuredAzimuth = 0.0;    // AKA Yaw or Heading
 double MeasuredElevation = 0.0;  // AKA Zenith or Pitch
 double MeasuredRoll = 0.0;       // Unused, solar panels don't roll
+int AzimuthCommand = 0;
+int ElevationCommand = 0;
 // Motors
 int M1Running = 0;
 int M2Running = 0;
@@ -114,10 +116,10 @@ void ManualControl();
 void CheckLimitSwitches();
 void CheckLimitElev();
 void TransferPiData();
-void ReceivePiData();
+void ReceivePiData(int suntime);
 
 void setup() {
-    Serial.begin(9600);  // Serial for printing output
+    Serial.begin(115200);  // Serial for printing output
     Clock.begin();       // Activate RTC
     /*
      * NOTE ON RTC:
@@ -152,6 +154,11 @@ void setup() {
 }
 
 void loop() {
+    delay(2000);
+
+    accelComp.readGyro();
+    accelComp.readAccel();
+    accelComp.readMag();
     // Collect Data
     Voltages();
     Currents();
@@ -161,93 +168,97 @@ void loop() {
     Attitude(accelComp.ax, accelComp.ay, accelComp.az, accelComp.mx,
              accelComp.my, accelComp.mz);
 
+
     // Send Data to Pi
     MyDateAndTime = Clock.read();
-    if (MyDateAndTime.Minute % 2 ==
-        0) {  // Transfer data every 2min CHECK: if this is the desired interval
+    // if (MyDateAndTime.Minute % 2 ==
+    //     0) {  // Transfer data every 2min CHECK: if this is the desired interval
         if (PiComm ==
             0) {  // Prevents data being transferred multiple times in a row
             TransferPiData();
-            ReceivePiData(1);
-            PiComm = 1;
+            //ReceivePiData(1);
+            //PiComm = 1;
         }
-    } else {
-        PiComm = 0;
-    }
-
-    // Determine State
-    // CHECK: Is another State for subzero temps needed?
-    // Could just put the actions done in switch() in here
-    // ADD: May want to have the State 'persist' for a little bit, to prevent
-    // the solar panel from switching States too often ADD: Maybe also have the
-    // State only be triggered after multiple checks, to avoid accidently
-    // putting it in a wrong mode
-    /*
-    if (digitalRead(MANUAL) == HIGH) {
-        State = 0;
-    } else if (Completed == 1 || (LIMIT_SIG_1 == 1 || LIMIT_SIG_2 == 1)) {
-        State = 1;
-    } else if (BatteryTotalVoltage <
-               20) {  // Voltage level is an estimate of charge, must determine
-                      // the voltage to determine the charge. Current val is a
-                      // placeholder
-        State = 2;
-    } else if (MyDateAndTime.Minute % 30 == 0) {
-        digitalWrite(InverterDisable, LOW);
-        if (WindyWeather == 1) {
-            State = 3;
-        } else if (SnowyWeather == 1) {
-            State = 4;
-        } else if (Night == 1) {
-            State = 5;
-        } else if (CloudyWeather == 1) {
-            State = 6;
-        } else {
-            State = 7;
-            Completed = 0;
+    // } else {
+    //     PiComm = 0;
+    // }
+        MoveSPAzi(AzimuthCommand);
+        // Determine State
+        // CHECK: Is another State for subzero temps needed?
+        // Could just put the actions done in switch() in here
+        // ADD: May want to have the State 'persist' for a little bit, to
+        // prevent the solar panel from switching States too often ADD: Maybe
+        // also have the State only be triggered after multiple checks, to avoid
+        // accidently putting it in a wrong mode
+        /*
+        if (digitalRead(MANUAL) == HIGH) {
+            State = 0;
+        } else if (Completed == 1 || (LIMIT_SIG_1 == 1 || LIMIT_SIG_2 == 1)) {
+            State = 1;
+        } else if (BatteryTotalVoltage <
+                   20) {  // Voltage level is an estimate of charge, must
+        determine
+                          // the voltage to determine the charge. Current val is
+        a
+                          // placeholder
+            State = 2;
+        } else if (MyDateAndTime.Minute % 30 == 0) {
+            digitalWrite(InverterDisable, LOW);
+            if (WindyWeather == 1) {
+                State = 3;
+            } else if (SnowyWeather == 1) {
+                State = 4;
+            } else if (Night == 1) {
+                State = 5;
+            } else if (CloudyWeather == 1) {
+                State = 6;
+            } else {
+                State = 7;
+                Completed = 0;
+            }
         }
-    }
 
-    // Check if near limit switches
-    CheckLimitSwitches();
+        // Check if near limit switches
+        CheckLimitSwitches();
 
-    // Perform State
-    switch (State) {
-        case 0:  // Manual Mode
-            ManualControl();
-        case 1:  // Disable Motors
-            DisableMotor(1);
-            DisableMotor(2);
-        case 2:  // Conserve Battery
-            // Move SP to southern tilt and send signal to shut off inverter
-            digitalWrite(InverterDisable, HIGH);
-            MoveSPElev(SouthElev);
-            MoveSPAzi(SouthAzi);
-        case 3:  // Protect from Wind
-            // Insert set values for the most horizontal SP position
-            MoveSPElev(WindElev);
-            MoveSPAzi(WindAzi);
-        case 4:  // Protect from Snow
-            // Insert set values for the most vertical SP position
-            MoveSPElev(SnowElev);
-            MoveSPAzi(SnowAzi);
-            // Probably shouldn't trigger this the moment it snows- flurries are
-            // common in bing
-        case 5:  // Set to Morning
-                 // Use values from Pi for next morning's sunrise
-                 // MoveSPElev(float Elev);
-                 // MoveSPAzi(float Azi);
-        case 6:  // Cloudy Weather
-            // Move SP to southern tilt, do NOT shut off inverter
-            MoveSPElev(SouthElev);
-            MoveSPAzi(SouthAzi);
-        case 7:  // Angle Towards Sun
-            int a = 0;
-            // Use values taken from Pi
-            // MoveSPElev(float Elev);
-            // MoveSPAzi(float Azi);
-    }
-    */
+        // Perform State
+        switch (State) {
+            case 0:  // Manual Mode
+                ManualControl();
+            case 1:  // Disable Motors
+                DisableMotor(1);
+                DisableMotor(2);
+            case 2:  // Conserve Battery
+                // Move SP to southern tilt and send signal to shut off inverter
+                digitalWrite(InverterDisable, HIGH);
+                MoveSPElev(SouthElev);
+                MoveSPAzi(SouthAzi);
+            case 3:  // Protect from Wind
+                // Insert set values for the most horizontal SP position
+                MoveSPElev(WindElev);
+                MoveSPAzi(WindAzi);
+            case 4:  // Protect from Snow
+                // Insert set values for the most vertical SP position
+                MoveSPElev(SnowElev);
+                MoveSPAzi(SnowAzi);
+                // Probably shouldn't trigger this the moment it snows- flurries
+        are
+                // common in bing
+            case 5:  // Set to Morning
+                     // Use values from Pi for next morning's sunrise
+                     // MoveSPElev(float Elev);
+                     // MoveSPAzi(float Azi);
+            case 6:  // Cloudy Weather
+                // Move SP to southern tilt, do NOT shut off inverter
+                MoveSPElev(SouthElev);
+                MoveSPAzi(SouthAzi);
+            case 7:  // Angle Towards Sun
+                int a = 0;
+                // Use values taken from Pi
+                // MoveSPElev(float Elev);
+                // MoveSPAzi(float Azi);
+        }
+        */
 }
 
 void Voltages() {
@@ -465,7 +476,7 @@ void TransferPiData() {
     char date_time[32];
     DateTime current_time;
     current_time = Clock.read();
-    sprintf(date_time, "20%i-%i-%i_%i:%i:%i", current_time.Year,
+    sprintf(date_time, "20%i-%02i-%02i_%02i:%02i:%02i", current_time.Year,
             current_time.Month, current_time.Day, current_time.Hour,
             current_time.Minute, current_time.Second);
     // sprintf(date_time, "2022-02-20_02:55:32");
@@ -479,9 +490,9 @@ void TransferPiData() {
         "'Battery_Total_Voltage': %f, 'Battery_Total_Power' : %f, "
         "'Load_Voltage': %f, 'Load_Current': %f, 'Load_Power': %f, "
         "'Windspeed': %f, 'Outdoor_Temp': %f, "
-        "'Outdoor_Humidity': %f, 'Azimuth_Reading': %f, 'Azimuth_Command': %f, "
+        "'Outdoor_Humidity': %f, 'Azimuth_Reading': %f, 'Azimuth_Command': %i, "
         "'Azimuth_Motor_Mode': '%s', 'Azimuth_Motor_Status': '%s', "
-        "'Elevation_Reading': %f, 'Elevation_Command': %f, "
+        "'Elevation_Reading': %f, 'Elevation_Command': %i, "
         "'Elevation_Motor_Mode': '%s', 'Elevation_Motor_Status': '%s'}",
         date_time, system_status, PanelVoltage, 
         PanelCurrent, PanelVoltage * PanelCurrent, 
@@ -499,24 +510,28 @@ void TransferPiData() {
 void ReceivePiData(int suntime) {
     // ADD: Could try to get weather data to predict rain,snow, cloudy weather,
     // azimuth, elevation
-    char AziBuffer[8];
+    int AziBuffer;
+    int ElevBuffer;
     Serial.println("new_position");
-    Serial.readBytes(AziBuffer,2);
-    Serial.println(AziBuffer);
-    AzimuthCommand |= AziBuffer[0]<<8;
-    AzimuthCommand |= AziBuffer[1]<<0;
-    char ElevBuffer[8];
-    Serial.println("new_position");
-    Serial.readBytes(ElevBuffer,2);
-    ElevationCommand |= ElevBuffer[0]<<8;
-    ElevationCommand |= ElevBuffer[1]<<0;
-    Serial.println(ElevBuffer);
-    // actually receive data from raspi, azimuth then altitude in degrees
+    AziBuffer = Serial.readString().toInt();
+    ElevBuffer = Serial.readString().toInt();
+    AzimuthCommand = AziBuffer;
+    ElevationCommand = ElevBuffer;
     if (suntime == 1) { //CHANGE
-        char bufferthree[64];
         Serial.println("new_times");
-        Serial.readBytes(bufferthree,40);
-        Serial.println(bufferthree);
-        // actually receive data from raspi, sunrise then sunset in HH:MM:SS
+        String today_sunrise;
+        String today_sunset;
+        String tomorrow_sunrise;
+        String tomorrow_sunset;
+        today_sunrise = Serial.readString();
+        today_sunset = Serial.readString();
+        tomorrow_sunrise = Serial.readString();
+        tomorrow_sunset = Serial.readString();
+        today_sunrise.trim();
+        today_sunset.trim();
+        tomorrow_sunrise.trim();
+        tomorrow_sunset.trim();
+        //  actually receive data from raspi, sunrise then sunset in HH:MM:SS
     }
+    delay(200);
 }
