@@ -49,12 +49,12 @@ int M2_WEST = 4;
 int M1_UP = 5;
 int M1_DN = 6;
 // Motor Driver Inputs
-int M1_PUL = 40;
-int M1_DIR = 41;
-int M2_PUL = 42;
-int M2_DIR = 43;
-int LIMIT_SIG_1 = 46;  // Limit Switch 1(CHECK if elev or Azi)
-int LIMIT_SIG_2 = 47;  // Limit Switch 2(CHECK if elev or Azi)
+int M1_PUL = 13;
+int M1_DIR = 12;
+int M2_PUL = 4;
+int M2_DIR = 3;
+int LIMIT_SIG_1 = 9;  // Limit Switch 1(CHECK if elev or Azi)
+int LIMIT_SIG_2 = 8;  // Limit Switch 2(CHECK if elev or Azi)
 // Other
 int InverterDisable = 30;
 // Global Variables
@@ -513,8 +513,8 @@ void ReceivePiData(int suntime) {
     int AziBuffer;
     int ElevBuffer;
     Serial.println("new_position");
-    AziBuffer = Serial.readString().toInt();
-    ElevBuffer = Serial.readString().toInt();
+    AziBuffer = Serial.readStringUntil('\n').toInt();
+    ElevBuffer = Serial.readStringUntil('\n').toInt();
     AzimuthCommand = AziBuffer;
     ElevationCommand = ElevBuffer;
     if (suntime == 1) { //CHANGE
