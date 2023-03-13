@@ -246,7 +246,7 @@ void loop() {
         case 0:  // Manual Mode
             ManualControl();
         case 1:  // Disable Motors
-            DisableMotor(1);
+            +DisableMotor(1);
             DisableMotor(2);
         case 2:  // Conserve Battery
             // Move SP to southern tilt and send signal to shut off inverter
@@ -345,6 +345,10 @@ void Attitude(float ax, float ay, float az, float mx, float my, float mz) {
     MeasuredAzimuth *= 180.0 / PI;
     MeasuredElevation *= 180.0 / PI;
     MeasuredRoll *= 180.0 / PI;
+    if(MeasuredAzimuth < 0){
+        MeasuredAzimuth = abs(MeasuredAzimuth) + 180;
+    }
+    
 }
 
 void MoveSPElev(float Elev) {
