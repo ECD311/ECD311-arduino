@@ -73,11 +73,12 @@ double WindSpeed = 0;
 double MeasuredAzimuth = 0.0;    // AKA Yaw or Heading
 double MeasuredElevation = 0.0;  // AKA Zenith or Pitch
 double MeasuredRoll = 0.0;       // Unused, solar panels don't roll
-int AzimuthCommand = 0;
-int ElevationCommand = 0;
+
 // Motors
 int M1Running = 0;
 int M2Running = 0;
+int AziSpace = 0; //Adds a buffer for the motor movement
+int ElevSpace = 0; //Adds a buffer for the motor movement
 // Finite State Machine
 int State = 0;
 int WindyWeather = 0;
@@ -87,15 +88,11 @@ int Night = 0;
 int Completed = 0;
 // Data Transfer
 int PiComm = 0;
-int SolarAzimuth = 0;
-int SolarElevation = 0;
-int Sunset = 0;
-int Sunrise = 0;
-
 int SunriseAzimuth = 0;
 int SunriseElevation = 0;
-
 int morning_lockout = 0;
+int AzimuthCommand = 0;
+int ElevationCommand = 0;
 // Definitions
 // ADD: Must determine proper defintion values experimentally
 #define ElevRange 5.0
@@ -107,7 +104,7 @@ int morning_lockout = 0;
 #define WindElev 0.0
 #define WindAzi 0.0
 #define SouthElev 0.0
-#define SouthAzi 0.0
+#define SouthAzi 180.0
 
 // Function Declarations
 void Voltages();
@@ -225,11 +222,13 @@ void loop() {
         State = 2;
     } else if (MyDateAndTime.Minute % 30 == 0) {
         digitalWrite(InverterDisable, LOW);
+        AziSpace = 0;
+        ElevSpace = 0;
         if (WindyWeather == 1) {
             State = 3;
         } else if (SnowyWeather == 1) {
             State = 4;
-        } else if (Night == 1) {
+        } else if ((Today_Sunrise.Hour > MyDateAndTime.Hour) || (Today_Sunset.Hour < MyDateAndTime.Hour)) {
             State = 5;
         } else if (CloudyWeather == 1) {
             State = 6;
@@ -267,8 +266,8 @@ void loop() {
             // common in bing
         case 5:  // Set to Morning
                  // Use values from Pi for next morning's sunrise
-                 // MoveSPElev(float Elev);
-                 // MoveSPAzi(float Azi);
+                 MoveSPElev(sunrise_azimuth);
+                 MoveSPAzi(sunrise_elevation);
         case 6:  // Cloudy Weather
             // Move SP to southern tilt, do NOT shut off inverter
             MoveSPElev(SouthElev);
@@ -276,8 +275,8 @@ void loop() {
         case 7:  // Angle Towards Sun
             int a = 0;
             // Use values taken from Pi
-            // MoveSPElev(float Elev);
-            // MoveSPAzi(float Azi);
+            // MoveSPElev(ElevationCommand);
+            // MoveSPAzi(AzimuthCommand);
     }
     */
 }
@@ -350,26 +349,28 @@ void Attitude(float ax, float ay, float az, float mx, float my, float mz) {
 
 void MoveSPElev(float Elev) {
     // If less or greater than the range, move the motors to fix
-    if (Elev - ElevRange >= MeasuredElevation) {
+    if (Elev - ElevRange - ElevSpace >= MeasuredElevation) {
         EnableMotor(
             2, 1);  // Need to determine which direction leads to which angle
                     // change CHECK: if second variable should be 1 or 2
-    } else if (Elev + ElevRange >= MeasuredElevation) {
+    } else if (Elev + ElevRange + ElevSpace >= MeasuredElevation) {
         EnableMotor(2, 2);
     } else {
         DisableMotor(2);
+        ElevSpace = 5;
     }
 }
 
 void MoveSPAzi(float Azi) {
     // If less or greater than the range, move the motors to fix
-    if (Azi - AziRange >= MeasuredAzimuth) {
+    if (Azi - AziRange - AziSpace >= MeasuredAzimuth) {
         EnableMotor(1, 1);  // Need to determine which direction leads to which
                             // angle change
-    } else if (Azi + AziRange <= MeasuredAzimuth) {
+    } else if (Azi + AziRange + AziSpace <= MeasuredAzimuth) {
         EnableMotor(1, 2);
     } else {
         DisableMotor(1);
+        AziSpace = 5;
     }
 }
 
