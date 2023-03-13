@@ -346,7 +346,7 @@ void Attitude(float ax, float ay, float az, float mx, float my, float mz) {
     MeasuredElevation *= 180.0 / PI;
     MeasuredRoll *= 180.0 / PI;
     if(MeasuredAzimuth < 0){
-        MeasuredAzimuth = abs(MeasuredAzimuth) + 180;
+        MeasuredAzimuth = MeasuredAzimuth + 360;
     }
     
 }
