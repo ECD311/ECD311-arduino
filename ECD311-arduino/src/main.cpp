@@ -16,26 +16,26 @@
 // Pure Inputs
 // Temperature/Humidity Sensor
 Adafruit_SHT31 sht30 = Adafruit_SHT31();
-// Compass/accelerometer
-//  Taken from old code
-LSM9DS1 accelComp;
+// Compass+accelerometer
+LSM9DS1 Comp;
+LSM9DS1 Accel;
 // I2C addresses for compass and accelerometer communication
-#define LSM9DS1_C 0x1E  // compass
-#define LSM9DS1_A 0x6B  // accelerometer
+#define LSM9DS1_C_C 0x1E  // Comp's compass
+#define LSM9DS1_A_C 0x6B  // Comp's accelerometer
+#define LSM9DS1_C_A 0x1C  // Accel's compass
+#define LSM9DS1_A_A 0x6A  // Accel's accelerometer
 // Taken from example code
 // Earth's magnetic field varies by location. Add or subtract
 // a declination to get a more accurate heading. Calculated here:
 // http://www.ngdc.noaa.gov/geomag-web/#declination
-#define DECLINATION -12.513  // Declination (degrees) in Binghamton, NY.
-// Pure Outputs
-// Input/Outputs
+// This does change over time, last updated 3/15/2023
+#define DECLINATION -11.57  // Declination (degrees) in Binghamton, NY.
 // Real Time Clock
 DS3231_Simple Clock;
 DateTime MyDateAndTime;
 DateTime Today_Sunrise;
 DateTime Today_Sunset;
-// Pins
-// Analog
+// Analog Pins
 ACS712 SP_CUR(A0);     // Solar Panel current sensor
 ACS712 BATT_CUR(A1);   // Battery current sensor
 ACS712 LOAD_CUR(A2);   // Load current sensor
@@ -43,7 +43,7 @@ int SP_VOLT = A3;      // Voltage of Solar Panel
 int BATT24_VOLT = A4;  // Voltage of both batteries
 int BATT12_VOLT = A5;  // Voltage of 1st batteries
 int W_SIG = A15;       // Wind Meter (Anenometer)
-// Digital
+// Digital Pins
 // Manual Controls for both Motors
 int MANUAL = 2;  // Activates Motor Manual mode
 int M2_EAST = 3;
@@ -73,19 +73,18 @@ double WindSpeed = 0;
 double MeasuredAzimuth = 0.0;    // AKA Yaw or Heading
 double MeasuredElevation = 0.0;  // AKA Zenith or Pitch
 double MeasuredRoll = 0.0;       // Unused, solar panels don't roll
-
 // Motors
 int M1Running = 0;
 int M2Running = 0;
-int AziSpace = 0; //Adds a buffer for the motor movement
-int ElevSpace = 0; //Adds a buffer for the motor movement
+int AziSpace = 0;   //Adds a buffer for the motor movement
+int ElevSpace = 0;  //Adds a buffer for the motor movement
 // Finite State Machine
 int State = 0;
 int WindyWeather = 0;
 int SnowyWeather = 0;
 int CloudyWeather = 0;
-int Night = 0;
-int Completed = 0;
+int NEAR_LIM1 = 0;
+int NEAR_LIM2 = 0;
 // Data Transfer
 int PiComm = 0;
 int SunriseAzimuth = 0;
@@ -105,13 +104,17 @@ int ElevationCommand = 0;
 #define WindAzi 0.0
 #define SouthElev 0.0
 #define SouthAzi 180.0
+//These are specific to the BROWN compass being used
+//See maintenance document for determining offset
+#define XOffset -12.02
+#define YOffset 30.12
 
 // Function Declarations
 void Voltages();
 void Currents();
 void TempAndHumid();
 void Wind();
-void Attitude(float ax, float ay, float az, float mx, float my, float mz);
+void Attitude(float ax, float ay, float az, float mx, float my);
 void MoveSPAzi(float Azi);
 void MoveSPElev(float Elev);
 void EnableMotor(int MotorNumber, int Direction);
@@ -132,17 +135,17 @@ void setup() {
      * with the 'clock' library
      */
     // Set Pin Modes
-    pinMode(M2_EAST, INPUT);
-    pinMode(M2_WEST, INPUT);
-    pinMode(MANUAL, INPUT);
-    pinMode(M1_UP, INPUT);
-    pinMode(M1_DN, INPUT);
+    pinMode(MANUAL, INPUT_PULLUP);
+    pinMode(M2_EAST, INPUT_PULLUP);
+    pinMode(M2_WEST, INPUT_PULLUP);
+    pinMode(M1_UP, INPUT_PULLUP);
+    pinMode(M1_DN, INPUT_PULLUP);
     pinMode(M1_PUL, OUTPUT);
     pinMode(M1_DIR, OUTPUT);
     pinMode(M2_PUL, OUTPUT);
     pinMode(M2_DIR, OUTPUT);
-    pinMode(LIMIT_SIG_1, INPUT);
-    pinMode(LIMIT_SIG_2, INPUT);
+    pinMode(LIMIT_SIG_1, INPUT_PULLUP);
+    pinMode(LIMIT_SIG_2, INPUT_PULLUP);
     pinMode(InverterDisable, OUTPUT);
     // Begin I2C Communication
     // Begin Communication with SHT30
@@ -150,36 +153,39 @@ void setup() {
         Serial.println("Couldn't find SHT30");
     }
     // Begin Communication with LSM9DS1 accelerometer
-    if (!accelComp.begin())  // with no arguments, this uses default addresses
-                             // (AG:0x6B, M:0x1E) and i2c port (Wire).
+    if (!Comp.begin(LSM9DS1_A_C, LSM9DS1_C_C))
     {
-        Serial.println("Couldn't Find LSM9DS1.");
+        Serial.println("Couldn't Find LSM9DS1 COMP");
     }
-
+    if (!Accel.begin(LSM9DS1_A_A,LSM9DS1_C_A))
+    {
+        Serial.println("Couldn't Find LSM9DS1 ACCEL");
+    }
     MyDateAndTime = Clock.read();
-
     // get initial times and position from pi
     ReceivePiData(1);
 }
 
 void loop() {
+    //CHECK: Need delay?
     delay(2000);
 
-    accelComp.readGyro();
-    accelComp.readAccel();
-    accelComp.readMag();
     // Collect Data
     Voltages();
     Currents();
     TempAndHumid();
     Wind();
+    Comp.readAccel();
+    Comp.readMag();
+    Attitude(Comp.ax, Comp.ay, Comp.az, -Comp.my,-Comp.mx);
+    Accel.readAccel();
+    Accel.readMag();
+    Attitude(Accel.ax, Accel.ay, Accel.az, -Accel.my,-Accel.mx);
 
-    Attitude(accelComp.ax, accelComp.ay, accelComp.az, accelComp.mx,
-             accelComp.my, accelComp.mz);
-
-    // Send Data to Pi
+    //Determine Current Time
     MyDateAndTime = Clock.read();
 
+    // Send Data to Pi
     // send data every loop ( 2 seconds )
     TransferPiData();
     if ((MyDateAndTime.Hour == 6) && (MyDateAndTime.Minute == 0)) {
@@ -201,24 +207,20 @@ void loop() {
         }
     }
     MoveSPAzi(AzimuthCommand);
+    //Check if near limit switches. Vals not tested yet
+    CheckLimitSwitches();
     // Determine State
-    // CHECK: Is another State for subzero temps needed?
     // Could just put the actions done in switch() in here
-    // ADD: May want to have the State 'persist' for a little bit, to
-    // prevent the solar panel from switching States too often ADD: Maybe
-    // also have the State only be triggered after multiple checks, to avoid
-    // accidently putting it in a wrong mode
+    // ADD: Maybe have the State only be triggered after multiple checks
+    //to avoid accidently putting it in a wrong mode
     /*
     if (digitalRead(MANUAL) == HIGH) {
         State = 0;
-    } else if (Completed == 1 || (LIMIT_SIG_1 == 1 || LIMIT_SIG_2 == 1)) {
+    //Must figure out what to do with limit switches in testing
+    //Do we move the SP away when a limit switch is hit or just shut it all down?
+    } else if ((digitalRead(LIMIT_SIG_1) == HIGH || NEAR_LIM1 == 1) || (digitalRead(LIMIT_SIG_2) == HIGH || NEAR_LIM2 == 1)) {
         State = 1;
-    } else if (BatteryTotalVoltage <
-               20) {  // Voltage level is an estimate of charge, must
-    determine
-                      // the voltage to determine the charge. Current val is
-    a
-                      // placeholder
+    } else if (BatteryTotalVoltage < 24.4) {
         State = 2;
     } else if (MyDateAndTime.Minute % 30 == 0) {
         digitalWrite(InverterDisable, LOW);
@@ -226,6 +228,7 @@ void loop() {
         ElevSpace = 0;
         if (WindyWeather == 1) {
             State = 3;
+        //Maybe have snowy only trigger if winter weather advisory?
         } else if (SnowyWeather == 1) {
             State = 4;
         } else if ((Today_Sunrise.Hour > MyDateAndTime.Hour) || (Today_Sunset.Hour < MyDateAndTime.Hour)) {
@@ -234,20 +237,24 @@ void loop() {
             State = 6;
         } else {
             State = 7;
-            Completed = 0;
         }
     }
-
-    // Check if near limit switches
-    CheckLimitSwitches();
 
     // Perform State
     switch (State) {
         case 0:  // Manual Mode
             ManualControl();
-        case 1:  // Disable Motors
-            +DisableMotor(1);
-            DisableMotor(2);
+        case 1:  // Limit Switch Trigger
+        //If we want to have it more than just disable motors
+        //(Which would have to be manually fixed)
+        //We need to figure out where to move the motors and which switch is for which axis
+            if(digitalRead(LIMIT_SIG_1) == HIGH || NEAR_LIM1 == 1){
+                DisableMotor(1);
+                DisableMotor(2);
+            }else{
+                DisableMotor(1);
+                DisableMotor(2);
+            }
         case 2:  // Conserve Battery
             // Move SP to southern tilt and send signal to shut off inverter
             digitalWrite(InverterDisable, HIGH);
@@ -261,19 +268,15 @@ void loop() {
             // Insert set values for the most vertical SP position
             MoveSPElev(SnowElev);
             MoveSPAzi(SnowAzi);
-            // Probably shouldn't trigger this the moment it snows- flurries
-    are
-            // common in bing
         case 5:  // Set to Morning
-                 // Use values from Pi for next morning's sunrise
-                 MoveSPElev(sunrise_azimuth);
-                 MoveSPAzi(sunrise_elevation);
+            // Use values from Pi for next morning's sunrise
+            MoveSPElev(SunriseAzimuth);
+            MoveSPAzi(SunriseElevation);
         case 6:  // Cloudy Weather
             // Move SP to southern tilt, do NOT shut off inverter
             MoveSPElev(SouthElev);
             MoveSPAzi(SouthAzi);
         case 7:  // Angle Towards Sun
-            int a = 0;
             // Use values taken from Pi
             // MoveSPElev(ElevationCommand);
             // MoveSPAzi(AzimuthCommand);
@@ -283,8 +286,7 @@ void loop() {
 
 void Voltages() {
     // Read the input on analog pin(s)
-    // Convert the analog readings (which range from 0 - 1023) to a voltage (0 -
-    // 5V)
+    // Convert analog readings (which range from 0-1023) to a voltage (0-55V)
     PanelVoltage = analogRead(SP_VOLT) * (55 / 1023);             // max 55V
     BatteryTotalVoltage = analogRead(BATT24_VOLT) * (55 / 1023);  // max 55V
     BatteryOneVoltage = analogRead(BATT12_VOLT) * (55 / 1023);    // max 55V
@@ -325,14 +327,14 @@ void Wind() {
 // https://web.archive.org/web/20190824101042/http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
 // Heading calculations taken from this app note:
 // https://web.archive.org/web/20150513214706/http://www51.honeywell.com/aero/common/documents/myaerospacecatalog-documents/Defense_Brochures-documents/Magnetic__Literature_Application_notes-documents/AN203_Compass_Heading_Using_Magnetometers.pdf
-void Attitude(float ax, float ay, float az, float mx, float my, float mz) {
+void Attitude(float ax, float ay, float az, float mx, float my) {
     MeasuredRoll = atan2(ay, az);
     MeasuredElevation = atan2(-ax, sqrt(ay * ay + az * az));
 
-    if (my == 0)
-        MeasuredAzimuth = (mx < 0) ? PI : 0;
+    if (my-YOffset == 0)
+        MeasuredAzimuth = (mx-XOffset < 0) ? PI : 0;
     else
-        MeasuredAzimuth = atan2(mx, my);
+        MeasuredAzimuth = atan2(mx-XOffset, my-YOffset);
 
     MeasuredAzimuth -= DECLINATION * PI / 180;
 
@@ -348,7 +350,6 @@ void Attitude(float ax, float ay, float az, float mx, float my, float mz) {
     if(MeasuredAzimuth < 0){
         MeasuredAzimuth = MeasuredAzimuth + 360;
     }
-    
 }
 
 void MoveSPElev(float Elev) {
@@ -437,14 +438,14 @@ void CheckLimitSwitches() {
     // See if near limit switch to avoid triggering it, figure out via measured
     // vals
     if (MeasuredElevation > LimitElev) {  // CHECK: Greater or less than?
-        LIMIT_SIG_1 = 1;
+        NEAR_LIM1 = 1;
     } else {
-        LIMIT_SIG_1 = 0;
+        NEAR_LIM1 = 0;
     }
     if (MeasuredAzimuth > LimitAzi) {  // CHECK: Greater or less than?
-        LIMIT_SIG_2 = 1;
+        NEAR_LIM2 = 1;
     } else {
-        LIMIT_SIG_2 = 0;
+        NEAR_LIM2 = 0;
     }
 }
 
