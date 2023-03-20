@@ -134,6 +134,10 @@ void setup() {
      * The date and time can be changed via the 'SetDateTime' example that comes
      * with the 'clock' library
      */
+
+    while (Serial.readStringUntil('\n') != "start")
+        ;
+
     // Set Pin Modes
     pinMode(MANUAL, INPUT_PULLUP);
     pinMode(M2_EAST, INPUT_PULLUP);
