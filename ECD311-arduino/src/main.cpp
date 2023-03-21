@@ -7,11 +7,6 @@
 #include <SparkFunLSM9DS1.h>  // Library for accelerometer and compass
 #include <Wire.h>             // Library for I2C communication
 
-/*
- * FIX ALL PIN LOCATIONS
- * CHECK MOTOR1/MOTOR2/ELEV/AZI
- */
-
 // Non-Pin Setup for Components
 // Pure Inputs
 // Temperature/Humidity Sensor
@@ -70,8 +65,9 @@ double MeasuredRoll = 0.0;       // Unused, solar panels don't roll
 // Motors
 int M1Running = 0;
 int M2Running = 0;
-int AziSpace = 0;   //Adds a buffer for the motor movement
-int ElevSpace = 0;  //Adds a buffer for the motor movement
+//Adds buffer for the motor movement to prevent jittering
+int AziSpace = 0;   
+int ElevSpace = 0;
 // Finite State Machine
 int State = 0;
 int WindyWeather = 0;
@@ -87,16 +83,15 @@ int morning_lockout = 0;
 int AzimuthCommand = 0;
 int ElevationCommand = 0;
 // Definitions
-// ADD: Must determine proper defintion values experimentally
 #define ElevRange 5.0
 #define AziRange 5.0
-#define SnowElev 0.0
-#define SnowAzi 0.0
-#define LimitElev 0.0
-#define LimitAzi 0.0
+#define SnowElev 80.0
+#define SnowAzi 180.0 
+#define LimitElev 0.0 //CHECK
+#define LimitAzi 0.0 //CHECK, may not need
 #define WindElev 0.0
-#define WindAzi 0.0
-#define SouthElev 0.0
+//Average position of the sun in Bing throughout the year
+#define SouthElev 40.0
 #define SouthAzi 180.0
 //These are specific to the compass being used
 //See maintenance document for determining offset
@@ -141,6 +136,7 @@ void setup() {
         ;
 
     // Set Pin Modes
+    //Pullup inputs are for switch controls
     pinMode(MANUAL, INPUT_PULLUP);
     pinMode(M2_EAST, INPUT_PULLUP);
     pinMode(M2_WEST, INPUT_PULLUP);
@@ -211,34 +207,31 @@ void loop() {
             ReceivePiData(0);
         }
     }
-    MoveSPElev(ElevationCommand);
-    MoveSPAzi(AzimuthCommand);
-    //Check if near limit switches. Vals not tested yet
-    //CheckLimitSwitches();
+
+    //Attempt to prevent collision by checking proximity w limit switch
+    CheckLimitSwitches(); //CHECK vals
+
     // Determine State
-    // ADD: Maybe have the State only be triggered after multiple checks
-    //to avoid accidently putting it in a wrong mode
-    /*
     if (digitalRead(MANUAL) == HIGH) {
         State = 0;
     //Must figure out what to do with limit switches in testing
     //Do we move the SP away when a limit switch is hit or just shut it all down?
-    } else if ((digitalRead(LIMIT_SIG_1) == HIGH || NEAR_LIM1 == 1) || (digitalRead(LIMIT_SIG_2) == HIGH || NEAR_LIM2 == 1)) {
+    //CHECK
+    } else if ((digitalRead(LIMIT_SIG_1) == LOW || NEAR_LIM1 == 1) || (digitalRead(LIMIT_SIG_2) == LOW || NEAR_LIM2 == 1)) {
         State = 1;
     } else if (BatteryTotalVoltage < 24.4) {
         State = 2;
     } else if (MyDateAndTime.Minute % 30 == 0) {
-        digitalWrite(InverterDisable, LOW);
+        digitalWrite(InverterDisable, LOW); //CHECK see if it works
         AziSpace = 0;
         ElevSpace = 0;
-        if (WindyWeather == 1) {
+        if (WindSpeed > 123) {
             State = 3;
-        //Maybe have snowy only trigger if winter weather advisory?
-        } else if (SnowyWeather == 1) {
+        } else if (Temp < -5.0 && Humid > 70.0) { //These vals are educated guesses
             State = 4;
         } else if ((Today_Sunrise.Hour > MyDateAndTime.Hour) || (Today_Sunset.Hour < MyDateAndTime.Hour)) {
             State = 5;
-        } else if (CloudyWeather == 1) {
+        } else if (Humid > 70.0) {//These vals are educated guesses
             State = 6;
         } else {
             State = 7;
@@ -261,37 +254,32 @@ void loop() {
                 DisableMotor(2);
             }
         case 2:  // Conserve Battery
-            // Move SP to southern tilt and send signal to shut off inverter
             digitalWrite(InverterDisable, HIGH);
             MoveSPElev(SouthElev);
             MoveSPAzi(SouthAzi);
         case 3:  // Protect from Wind
-            // Insert set values for the most horizontal SP position
             MoveSPElev(WindElev);
-            MoveSPAzi(WindAzi);
+            //Azi doesn't matter
         case 4:  // Protect from Snow
-            // Insert set values for the most vertical SP position
             MoveSPElev(SnowElev);
-            MoveSPAzi(SnowAzi);
+            MoveSPAzi(SnowAzi); //Azi matters only to avoid collision
         case 5:  // Set to Morning
-            // Use values from Pi for next morning's sunrise
             MoveSPElev(SunriseAzimuth);
             MoveSPAzi(SunriseElevation);
         case 6:  // Cloudy Weather
-            // Move SP to southern tilt, do NOT shut off inverter
             MoveSPElev(SouthElev);
             MoveSPAzi(SouthAzi);
         case 7:  // Angle Towards Sun
-            // Use values taken from Pi
-            // MoveSPElev(ElevationCommand);
-            // MoveSPAzi(AzimuthCommand);
+            MoveSPElev(ElevationCommand);
+            MoveSPAzi(AzimuthCommand);
     }
-    */
+    
 }
 
 void Voltages() {
     // Read the input on analog pin(s)
     // Convert analog readings (which range from 0-1023) to a voltage (0-55V)
+    //CHECK
     PanelVoltage = analogRead(SP_VOLT) * (55 / 1023);             // max 55V
     BatteryTotalVoltage = analogRead(BATT24_VOLT) * (55 / 1023);  // max 55V
     BatteryOneVoltage = analogRead(BATT12_VOLT) * (55 / 1023);    // max 55V
@@ -312,6 +300,7 @@ void TempAndHumid() {
 void Wind() {
     // Taken from old code, must test
     //  Read the input on analog pin A15
+    //CHECK
     float sensorValue15 = (analogRead(W_SIG) * (5.0 / 1023.0));
     if (sensorValue15 < 0.4) {
         WindSpeed = 0;
@@ -335,6 +324,7 @@ void RollElevation(float ax, float ay, float az) {
 // Heading (aka yaw/azimuth) calculations taken from this app note:
 // https://web.archive.org/web/20150513214706/http://www51.honeywell.com/aero/common/documents/myaerospacecatalog-documents/Defense_Brochures-documents/Magnetic__Literature_Application_notes-documents/AN203_Compass_Heading_Using_Magnetometers.pdf
 void Azimuth(float mx, float my){
+    //Subtract offset vals from measurements
     if (my-YOffset == 0)
         MeasuredAzimuth = (mx-XOffset < 0) ? PI : 0;
     else
@@ -386,7 +376,7 @@ void MoveSPAzi(float Azi) {
  */
 // Enable Motor Rotation
 void EnableMotor(int MotorNumber, int Direction) {
-    if (MotorNumber == 1 && M1Running == 0) {  // CHECK:CCW or CW?
+    if (MotorNumber == 1 && M1Running == 0) {
         if (Direction == 1) {
             digitalWrite(M1_DIR, LOW);
         } else {
@@ -395,7 +385,7 @@ void EnableMotor(int MotorNumber, int Direction) {
         delayMicroseconds(100);
         analogWrite(M1_PUL, 127);
         M1Running = 1;
-    } else if (MotorNumber == 2 && M2Running == 0) {  // CHECK: CCW or CW?
+    } else if (MotorNumber == 2 && M2Running == 0) {
         if (Direction == 1) {
             digitalWrite(M2_DIR, LOW);
         } else {
@@ -424,21 +414,20 @@ void DisableMotor(int MotorNumber) {
 }
 
 void ManualControl() {
-    if (digitalRead(M1_UP) == HIGH) {
+    if (digitalRead(M1_UP) == LOW) {
         EnableMotor(2, 1);
-    } else if (digitalRead(M1_DN) == HIGH) {
+    } else if (digitalRead(M1_DN) == LOW) {
         EnableMotor(2, 2);
     }
-    if (digitalRead(M2_EAST) == HIGH) {
+    if (digitalRead(M2_EAST) == LOW) {
         EnableMotor(1, 1);
-    } else if (digitalRead(M2_WEST) == HIGH) {
+    } else if (digitalRead(M2_WEST) == LOW) {
         EnableMotor(1, 2);
     }
 }
 
 void CheckLimitSwitches() {
-    // See if near limit switch to avoid triggering it, figure out via measured
-    // vals
+    // See if near limit switch to avoid triggering it, determine w measured vals
     if (MeasuredElevation > LimitElev) {  // CHECK: Greater or less than?
         NEAR_LIM1 = 1;
     } else {
@@ -536,8 +525,6 @@ void TransferPiData() {
 }
 
 void ReceivePiData(int suntime) {
-    // ADD: Could try to get weather data to predict rain,snow, cloudy weather,
-    // azimuth, elevation
     int AziBuffer;
     int ElevBuffer;
     Serial.println("new_position");
