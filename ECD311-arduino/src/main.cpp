@@ -183,9 +183,9 @@ void loop() {
     Wind();
 
     Comp.readMag();
-    Azimuth(-Accel.my,-Accel.mx);
+    Azimuth(-Comp.my,-Comp.mx);
     Accel.readAccel();
-    RollElevation(Comp.ax, Comp.ay, Comp.az);
+    RollElevation(Accel.ax, Accel.ay, Accel.az);
 
     //Determine Current Time
     MyDateAndTime = Clock.read();
