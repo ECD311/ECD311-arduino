@@ -47,7 +47,7 @@ int M2_DIR = 3;
 int LIMIT_SIG_1 = 9;  // Limit Switch 1(CHECK if elev or Azi)
 int LIMIT_SIG_2 = 8;  // Limit Switch 2(CHECK if elev or Azi)
 // Other
-int InverterDisable = 30;
+int InverterEnable = 11;
 // Global Variables
 // Sensors
 double Temp = 0;
@@ -148,7 +148,7 @@ void setup() {
     pinMode(M2_DIR, OUTPUT);
     pinMode(LIMIT_SIG_1, INPUT_PULLUP);
     pinMode(LIMIT_SIG_2, INPUT_PULLUP);
-    pinMode(InverterDisable, OUTPUT);
+    pinMode(InverterEnable, OUTPUT);
     // Begin I2C Communication
     // Begin Communication with SHT30
     if (!sht30.begin(0x44)) {
@@ -166,6 +166,8 @@ void setup() {
     MyDateAndTime = Clock.read();
     // get initial times and position from pi
     ReceivePiData(1);
+    //Turn ON inverter initially
+    digitalWrite(InverterEnable, HIGH);
 }
 
 void loop() {
@@ -222,7 +224,7 @@ void loop() {
     } else if (BatteryTotalVoltage < 24.4) {
         State = 2;
     } else if (MyDateAndTime.Minute % 30 == 0) {
-        digitalWrite(InverterDisable, LOW); //CHECK see if it works
+        digitalWrite(InverterEnable, HIGH); //CHECK see if it works
         AziSpace = 0;
         ElevSpace = 0;
         if (WindSpeed > 123) {
@@ -254,7 +256,7 @@ void loop() {
                 DisableMotor(2);
             }
         case 2:  // Conserve Battery
-            digitalWrite(InverterDisable, HIGH);
+            digitalWrite(InverterEnable, LOW);
             MoveSPElev(SouthElev);
             MoveSPAzi(SouthAzi);
         case 3:  // Protect from Wind
