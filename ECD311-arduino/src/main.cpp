@@ -106,8 +106,8 @@ int ElevationCommand = 0;
 #define SouthAzi 180.0
 //These are specific to the BROWN compass being used
 //See maintenance document for determining offset
-#define XOffset -12.02
-#define YOffset 30.12
+#define XOffset 14.56
+#define YOffset -4.27
 
 // Function Declarations
 void Voltages();
