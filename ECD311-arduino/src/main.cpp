@@ -24,12 +24,6 @@ LSM9DS1 Accel;
 #define LSM9DS1_A_C 0x6B  // Comp's accelerometer
 #define LSM9DS1_C_A 0x1C  // Accel's compass
 #define LSM9DS1_A_A 0x6A  // Accel's accelerometer
-// Taken from example code
-// Earth's magnetic field varies by location. Add or subtract
-// a declination to get a more accurate heading. Calculated here:
-// http://www.ngdc.noaa.gov/geomag-web/#declination
-// This does change over time, last updated 3/15/2023
-#define DECLINATION -11.57  // Declination (degrees) in Binghamton, NY.
 // Real Time Clock
 DS3231_Simple Clock;
 DateTime MyDateAndTime;
@@ -108,13 +102,20 @@ int ElevationCommand = 0;
 //See maintenance document for determining offset
 #define XOffset 16.88
 #define YOffset -3.87
+// Taken from example code
+// Earth's magnetic field varies by location. Add or subtract
+// a declination to get a more accurate heading. Calculated here:
+// http://www.ngdc.noaa.gov/geomag-web/#declination
+// This does change over time, last updated 3/15/2023
+#define DECLINATION -11.57  // Declination (degrees) in Binghamton, NY.
 
 // Function Declarations
 void Voltages();
 void Currents();
 void TempAndHumid();
 void Wind();
-void Attitude(float ax, float ay, float az, float mx, float my);
+void RollElevation(float ax, float ay, float az);
+void Azimuth(float mx, float my);
 void MoveSPAzi(float Azi);
 void MoveSPElev(float Elev);
 void EnableMotor(int MotorNumber, int Direction);
@@ -124,6 +125,7 @@ void CheckLimitSwitches();
 void CheckLimitElev();
 void TransferPiData();
 void ReceivePiData(int suntime);
+
 
 void setup() {
     Serial.begin(115200);  // Serial for printing output
@@ -179,12 +181,11 @@ void loop() {
     Currents();
     TempAndHumid();
     Wind();
-    Comp.readAccel();
+
     Comp.readMag();
-    Attitude(Comp.ax, Comp.ay, Comp.az, -Comp.my,-Comp.mx);
+    Azimuth(-Accel.my,-Accel.mx);
     Accel.readAccel();
-    Accel.readMag();
-    Attitude(Accel.ax, Accel.ay, Accel.az, -Accel.my,-Accel.mx);
+    RollElevation(Comp.ax, Comp.ay, Comp.az);
 
     //Determine Current Time
     MyDateAndTime = Clock.read();
@@ -210,11 +211,11 @@ void loop() {
             ReceivePiData(0);
         }
     }
+    MoveSPElev(ElevationCommand);
     MoveSPAzi(AzimuthCommand);
     //Check if near limit switches. Vals not tested yet
-    CheckLimitSwitches();
+    //CheckLimitSwitches();
     // Determine State
-    // Could just put the actions done in switch() in here
     // ADD: Maybe have the State only be triggered after multiple checks
     //to avoid accidently putting it in a wrong mode
     /*
@@ -318,23 +319,22 @@ void Wind() {
         WindSpeed = (sensorValue15 - 0.4) * (32.4 / (2.0 - 0.4));
     }
 }
-/*
-  Attitude() is adapted from LSM9DS1_Basic_I2C Example
-  We should be able to just use one accelerometer's pitch/roll/heading to
-  determine the position of the solar panel. The proper pitch/roll/heading can
-  only be determined once the accelerometer is in position on the solar panel
-  Could add a check for the pitch/roll/heading right before hitting the limit
-  switch, as an additional failsafe
-*/
-// Calculate elevation(aka altitude/pitch), roll, and azimuth(aka yaw/heading)
-// of the solar panel Pitch/roll calculations take from this app note:
+
+// Calculate elevation (aka altitude/pitch) and roll
+// Pitch/roll calculations take from this app note:
 // https://web.archive.org/web/20190824101042/http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
-// Heading calculations taken from this app note:
-// https://web.archive.org/web/20150513214706/http://www51.honeywell.com/aero/common/documents/myaerospacecatalog-documents/Defense_Brochures-documents/Magnetic__Literature_Application_notes-documents/AN203_Compass_Heading_Using_Magnetometers.pdf
-void Attitude(float ax, float ay, float az, float mx, float my) {
+void RollElevation(float ax, float ay, float az) {
     MeasuredRoll = atan2(ay, az);
     MeasuredElevation = atan2(-ax, sqrt(ay * ay + az * az));
+    // Convert everything from radians to degrees:
+    MeasuredElevation *= 180.0 / PI;
+    MeasuredRoll *= 180.0 / PI;
+}
 
+// Inputs should be negative
+// Heading (aka yaw/azimuth) calculations taken from this app note:
+// https://web.archive.org/web/20150513214706/http://www51.honeywell.com/aero/common/documents/myaerospacecatalog-documents/Defense_Brochures-documents/Magnetic__Literature_Application_notes-documents/AN203_Compass_Heading_Using_Magnetometers.pdf
+void Azimuth(float mx, float my){
     if (my-YOffset == 0)
         MeasuredAzimuth = (mx-XOffset < 0) ? PI : 0;
     else
@@ -346,11 +346,9 @@ void Attitude(float ax, float ay, float az, float mx, float my) {
         MeasuredAzimuth -= (2 * PI);
     else if (MeasuredAzimuth < -PI)
         MeasuredAzimuth += (2 * PI);
-
+    
     // Convert everything from radians to degrees:
     MeasuredAzimuth *= 180.0 / PI;
-    MeasuredElevation *= 180.0 / PI;
-    MeasuredRoll *= 180.0 / PI;
     if(MeasuredAzimuth < 0){
         MeasuredAzimuth = MeasuredAzimuth + 360;
     }
