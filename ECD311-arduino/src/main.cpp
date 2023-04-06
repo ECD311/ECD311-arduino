@@ -137,8 +137,8 @@ void setup() {
      * with the 'clock' library
      */
 
-    while (Serial.readStringUntil('\n') != "start")
-        ;
+    // while (Serial.readStringUntil('\n') != "start")
+    //     ;
 
     // Set Pin Modes
     pinMode(MANUAL, INPUT_PULLUP);
@@ -187,12 +187,15 @@ void loop() {
     Accel.readAccel();
     RollElevation(Accel.ax, Accel.ay, Accel.az);
 
-    //Determine Current Time
+    // Determine Current Time
     MyDateAndTime = Clock.read();
 
     // Send Data to Pi
     // send data every loop ( 2 seconds )
+    //if (MyDateAndTime.Second % 2 == 0){
     TransferPiData();
+    //}
+
     if ((MyDateAndTime.Hour == 6) && (MyDateAndTime.Minute == 0)) {
         if (!morning_lockout) {
             // get sunrise/sunset times & positions for the day
@@ -329,6 +332,7 @@ void RollElevation(float ax, float ay, float az) {
     // Convert everything from radians to degrees:
     MeasuredElevation *= 180.0 / PI;
     MeasuredRoll *= 180.0 / PI;
+    MeasuredElevation = -MeasuredElevation;
 }
 
 // Inputs should be negative
@@ -358,10 +362,10 @@ void MoveSPElev(float Elev) {
     // If less or greater than the range, move the motors to fix
     if (Elev - ElevRange - ElevSpace >= MeasuredElevation) {
         EnableMotor(
-            2, 1);  // Need to determine which direction leads to which angle
+            2, 2);  // Need to determine which direction leads to which angle
                     // change CHECK: if second variable should be 1 or 2
-    } else if (Elev + ElevRange + ElevSpace >= MeasuredElevation) {
-        EnableMotor(2, 2);
+    } else if (Elev + ElevRange + ElevSpace <= MeasuredElevation) {
+        EnableMotor(2, 1);
     } else {
         DisableMotor(2);
         ElevSpace = 5;
@@ -501,37 +505,38 @@ void TransferPiData() {
     } else {
         sprintf(ElevStatus, "OFF");
     }
-    char date_time[32];
+    char date_time[64];
     DateTime current_time;
     current_time = Clock.read();
-    sprintf(date_time, "20%i-%02i-%02i_%02i:%02i:%02i", current_time.Year,
+    sprintf(date_time, "20%02i-%02i-%02i_%02i_%02i_%02i", current_time.Year,
             current_time.Month, current_time.Day, current_time.Hour,
             current_time.Minute, current_time.Second);
+
+            // single bit difference btwn bcd 33 and bcd 23 @ bit 4
+            // 2 bits diff btwn bcd 03 and bcd 33 @ bits 4 and 5
+
     // sprintf(date_time, "2022-02-20_02:55:32");
     Serial.println("LOG");
     char buffer[1024];
     sprintf(
         buffer,
-        "{'Date_Time': '%s', 'System_Status': '%s', 'Solar_Panel_Voltage': %f, "
-        "'Solar_Panel_Current': %f, 'Solar_Panel_Power': %f, "
-        "'Battery_One_Voltage': %f, 'Battery_Two_Voltage': %f, "
-        "'Battery_Total_Voltage': %f, 'Battery_Total_Power' : %f, "
-        "'Load_Voltage': %f, 'Load_Current': %f, 'Load_Power': %f, "
-        "'Windspeed': %f, 'Outdoor_Temp': %f, "
-        "'Outdoor_Humidity': %f, 'Azimuth_Reading': %f, 'Azimuth_Command': %i, "
+        "{'Date_Time': '%s', 'System_Status': '%s', 'Solar_Panel_Voltage': '%f', "
+        "'Solar_Panel_Current': '%f', 'Solar_Panel_Power': '%f', "
+        "'Battery_One_Voltage': '%f', 'Battery_Two_Voltage': '%f', "
+        "'Battery_Total_Voltage': '%f', 'Battery_Total_Power' : '%f', "
+        "'Load_Voltage': '%f', 'Load_Current': '%f', 'Load_Power': '%f', "
+        "'Windspeed': '%f', 'Outdoor_Temp': '%f', "
+        "'Outdoor_Humidity': '%f', 'Azimuth_Reading': '%f', 'Azimuth_Command': '%i', "
         "'Azimuth_Motor_Mode': '%s', 'Azimuth_Motor_Status': '%s', "
-        "'Elevation_Reading': %f, 'Elevation_Command': %i, "
+        "'Elevation_Reading': '%f', 'Elevation_Command': '%i', "
         "'Elevation_Motor_Mode': '%s', 'Elevation_Motor_Status': '%s'}",
-        date_time, system_status, PanelVoltage, 
-        PanelCurrent, PanelVoltage * PanelCurrent, 
-        BatteryOneVoltage, BatteryTotalVoltage - BatteryOneVoltage, 
-        BatteryTotalVoltage, BatteryTotalVoltage * BatteryCurrent, 
-        BatteryTotalVoltage, LoadCurrent, BatteryTotalVoltage * LoadCurrent, 
-        WindSpeed, Temp, 
-        Humid, MeasuredAzimuth, AzimuthCommand, 
-        AzimMode, AzimStatus,
-        MeasuredElevation, ElevationCommand,
-        ElevMode, ElevStatus);
+        date_time, system_status, PanelVoltage, PanelCurrent,
+        PanelVoltage * PanelCurrent, BatteryOneVoltage,
+        BatteryTotalVoltage - BatteryOneVoltage, BatteryTotalVoltage,
+        BatteryTotalVoltage * BatteryCurrent, BatteryTotalVoltage, LoadCurrent,
+        BatteryTotalVoltage * LoadCurrent, WindSpeed, Temp, Humid,
+        MeasuredAzimuth, AzimuthCommand, AzimMode, AzimStatus,
+        MeasuredElevation, ElevationCommand, ElevMode, ElevStatus);
     Serial.println(buffer);
 }
 
