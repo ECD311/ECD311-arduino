@@ -499,7 +499,7 @@ void TransferPiData() {
     char date_time[64];
     DateTime current_time;
     current_time = Clock.read();
-    sprintf(date_time, "20%02i-%02i-%02i_%02i_%02i_%02i", current_time.Year,
+    sprintf(date_time, "20%02i_%02i_%02i_%02i_%02i_%02i", current_time.Year,
             current_time.Month, current_time.Day, current_time.Hour,
             current_time.Minute, current_time.Second);
 
