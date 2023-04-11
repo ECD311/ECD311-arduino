@@ -125,7 +125,10 @@ void ReceivePiData(int suntime);
 void setup() {
     TCCR0B = TCCR0B & (B11111000 | B00000010);
     Serial.begin(115200);  // Serial for printing output
-    Clock.begin();         // Activate RTC
+    Wire.begin();
+    //Wire.setClock(56000);
+    Serial.println("startup");
+    Clock.begin();  // Activate RTC
     /*
      * NOTE ON RTC:
      * If the battery on the RTC dies and the RTC's date and time is off,
@@ -150,6 +153,7 @@ void setup() {
     pinMode(LIMIT_SIG_1, INPUT_PULLUP);
     pinMode(LIMIT_SIG_2, INPUT_PULLUP);
     pinMode(InverterEnable, OUTPUT);
+    //Wire.setClock(1000);
     // Begin I2C Communication
     // Begin Communication with SHT30
     if (!sht30.begin(0x44)) {
