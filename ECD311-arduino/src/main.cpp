@@ -1,14 +1,17 @@
 // Libraries
 #include <ACS712.h>  // Library for current sensors
-#include <Adafruit_SHT31.h>  // Library for Temp and Humidity Sensor(SHT30 is compatible)
+
 #include <Arduino.h>
 #include <DS3231_Simple.h>    // Library for Real Time Clock
+/* //Tracking
 #include <SPI.h>              // Library for communication (may be unused)
 #include <SparkFunLSM9DS1.h>  // Library for accelerometer and compass
 #include <Wire.h>             // Library for I2C communication
-
+#include <Adafruit_SHT31.h>  // Library for Temp and Humidity Sensor(SHT30 is compatible)
+*/
 // Non-Pin Setup for Components
 // Pure Inputs
+/* //Tracking
 // Temperature/Humidity Sensor
 Adafruit_SHT31 sht30 = Adafruit_SHT31();
 // Compass+accelerometer
@@ -19,6 +22,7 @@ LSM9DS1 Accel;
 #define LSM9DS1_A_C 0x6B  // Comp's accelerometer
 #define LSM9DS1_C_A 0x1C  // Accel's compass
 #define LSM9DS1_A_A 0x6A  // Accel's accelerometer
+*/
 // Real Time Clock
 DS3231_Simple Clock;
 DateTime MyDateAndTime;
@@ -34,24 +38,24 @@ int BATT12_VOLT = A5;  // Voltage of 1st batteries
 int W_SIG = A15;       // Wind Meter (Anenometer)
 // Digital Pins
 // Manual Controls for both Motors
-int MANUAL = 2;  // Activates Motor Manual mode
-int M2_EAST = 3;
-int M2_WEST = 4;
-int M1_UP = 5;
-int M1_DN = 6;
+int MANUAL = 19;  // Activates Motor Manual mode
+int M2_EAST = 18;
+int M2_WEST = 17;
+int M1_UP = 16;
+int M1_DN = 15;
 // Motor Driver Inputs
 int M1_PUL = 13;
 int M1_DIR = 12;
 int M2_PUL = 4;
 int M2_DIR = 3;
+/* //Tracking
 int LIMIT_SIG_1 = 9;  // Limit Switch 1(CHECK if elev or Azi)
 int LIMIT_SIG_2 = 8;  // Limit Switch 2(CHECK if elev or Azi)
+*/
 // Other
 int InverterEnable = 11;
 // Global Variables
 // Sensors
-double Temp = 0;
-double Humid = 0;
 double PanelCurrent = 0;
 double BatteryCurrent = 0;
 double LoadCurrent = 0;
@@ -59,30 +63,41 @@ double BatteryTotalVoltage = 0;
 double PanelVoltage = 0;
 double BatteryOneVoltage = 0;
 double WindSpeed = 0;
+/* //Tracking
 double MeasuredAzimuth = 0.0;    // AKA Yaw or Heading
 double MeasuredElevation = 0.0;  // AKA Zenith or Pitch
 double MeasuredRoll = 0.0;       // Unused, solar panels don't roll
+double Temp = 0;
+double Humid = 0;
+*/
 // Motors
 int M1Running = 0;
 int M2Running = 0;
+/* //Tracking
 //Adds buffer for the motor movement to prevent jittering
 int AziSpace = 0;   
 int ElevSpace = 0;
+*/
 // Finite State Machine
 int State = 0;
+/* //Tracking
 int WindyWeather = 0;
 int SnowyWeather = 0;
 int CloudyWeather = 0;
 int NEAR_LIM1 = 0;
 int NEAR_LIM2 = 0;
+*/
 // Data Transfer
 int PiComm = 0;
+/* //Tracking
 int SunriseAzimuth = 0;
 int SunriseElevation = 0;
 int morning_lockout = 0;
 int AzimuthCommand = 0;
 int ElevationCommand = 0;
+*/
 // Definitions
+/* //Tracking
 #define ElevRange 5.0
 #define AziRange 5.0
 #define SnowElev 80.0
@@ -103,21 +118,22 @@ int ElevationCommand = 0;
 // http://www.ngdc.noaa.gov/geomag-web/#declination
 // This does change over time, last updated 3/15/2023
 #define DECLINATION -11.57  // Declination (degrees) in Binghamton, NY.
-
+*/
 // Function Declarations
 void Voltages();
 void Currents();
-void TempAndHumid();
+//void TempAndHumid(); //Tracking
 void Wind();
-void RollElevation(float ax, float ay, float az);
+/* //Tracking
+void RollElevation(float ax, float ay, float az); //Tracking
 void Azimuth(float mx, float my);
 void MoveSPAzi(float Azi);
 void MoveSPElev(float Elev);
+*/
 void EnableMotor(int MotorNumber, int Direction);
 void DisableMotor(int MotorNumber);
 void ManualControl();
-void CheckLimitSwitches();
-void CheckLimitElev();
+//void CheckLimitSwitches(); //Tracking
 void TransferPiData();
 void ReceivePiData(int suntime);
 
@@ -125,9 +141,10 @@ void ReceivePiData(int suntime);
 void setup() {
     TCCR0B = TCCR0B & (B11111000 | B00000010);
     Serial.begin(115200);  // Serial for printing output
+    /* //Tracking
     Wire.begin();
     //Wire.setClock(56000);
-    Serial.println("startup");
+    */
     Clock.begin();  // Activate RTC
     /*
      * NOTE ON RTC:
@@ -150,10 +167,12 @@ void setup() {
     pinMode(M1_DIR, OUTPUT);
     pinMode(M2_PUL, OUTPUT);
     pinMode(M2_DIR, OUTPUT);
+    /* //Tracking
     pinMode(LIMIT_SIG_1, INPUT_PULLUP);
     pinMode(LIMIT_SIG_2, INPUT_PULLUP);
+    */
     pinMode(InverterEnable, OUTPUT);
-    //Wire.setClock(1000);
+    /* //Tracking
     // Begin I2C Communication
     // Begin Communication with SHT30
     if (!sht30.begin(0x44)) {
@@ -166,6 +185,7 @@ void setup() {
     if (!Accel.begin(LSM9DS1_A_A, LSM9DS1_C_A)) {
         Serial.println("Couldn't Find LSM9DS1 ACCEL");
     }
+    */
     MyDateAndTime = Clock.read();
     // get initial times and position from pi
     ReceivePiData(1);
@@ -180,13 +200,14 @@ void loop() {
     // Collect Data
     Voltages();
     Currents();
-    TempAndHumid();
     Wind();
-
+    /* //Tracking
+    TempAndHumid();
     Comp.readMag();
     Azimuth(-Comp.my,-Comp.mx);
     Accel.readAccel();
     RollElevation(Accel.ax, Accel.ay, Accel.az);
+    */
 
     // Determine Current Time
     MyDateAndTime = Clock.read();
@@ -217,8 +238,22 @@ void loop() {
     }
 
     //Attempt to prevent collision by checking proximity w limit switch
-    CheckLimitSwitches(); //CHECK vals
+    //CheckLimitSwitches(); //CHECK vals //Tracking
 
+    //Non-Tracking Behavior
+    if (digitalRead(MANUAL) == HIGH){
+        ManualControl();
+        State = 0;
+    }else if (BatteryTotalVoltage < 24.4) {
+        digitalWrite(InverterEnable, LOW);
+        State = 2;
+    }else{
+        digitalWrite(InverterEnable, HIGH);
+        State = 7;
+    }
+
+
+    /* //Tracking -This is the behavior that we would've used if the tracking worked
     // Determine State
     if (digitalRead(MANUAL) == HIGH) {
         State = 0;
@@ -281,7 +316,7 @@ void loop() {
             MoveSPElev(ElevationCommand);
             MoveSPAzi(AzimuthCommand);
     }
-    
+    */
 }
 
 void Voltages() {
@@ -300,10 +335,12 @@ void Currents() {
     LoadCurrent = LOAD_CUR.mA_DC() / 1000.0;
 }
 
+/* //Tracking
 void TempAndHumid() {
     Temp = sht30.readTemperature();
     Humid = sht30.readHumidity();
 }
+*/
 
 void Wind() {
     // Taken from old code, must test
@@ -317,6 +354,7 @@ void Wind() {
     }
 }
 
+/* //Tracking
 // Calculate elevation (aka altitude/pitch) and roll
 // Pitch/roll calculations take from this app note:
 // https://web.archive.org/web/20190824101042/http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
@@ -379,6 +417,7 @@ void MoveSPAzi(float Azi) {
         AziSpace = 5;
     }
 }
+*/
 
 /*
  * Motor functions taken from 2018 code
@@ -434,7 +473,7 @@ void ManualControl() {
         EnableMotor(1, 2);
     }
 }
-
+/* //Tracking
 void CheckLimitSwitches() {
     // See if near limit switch to avoid triggering it, determine w measured vals
     if (MeasuredElevation > LimitElev) {  // CHECK: Greater or less than?
@@ -448,6 +487,7 @@ void CheckLimitSwitches() {
         NEAR_LIM2 = 0;
     }
 }
+*/
 
 void TransferPiData() {
     char system_status[25];
