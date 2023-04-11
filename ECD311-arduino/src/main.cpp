@@ -160,12 +160,10 @@ void setup() {
         Serial.println("Couldn't find SHT30");
     }
     // Begin Communication with LSM9DS1 accelerometer
-    if (!Comp.begin(LSM9DS1_A_C, LSM9DS1_C_C))
-    {
+    if (!Comp.begin(LSM9DS1_A_C, LSM9DS1_C_C)) {
         Serial.println("Couldn't Find LSM9DS1 COMP");
     }
-    if (!Accel.begin(LSM9DS1_A_A,LSM9DS1_C_A))
-    {
+    if (!Accel.begin(LSM9DS1_A_A, LSM9DS1_C_A)) {
         Serial.println("Couldn't Find LSM9DS1 ACCEL");
     }
     MyDateAndTime = Clock.read();
@@ -255,7 +253,7 @@ void loop() {
         case 1:  // Limit Switch Trigger
         //If we want to have it more than just disable motors
         //(Which would have to be manually fixed)
-        //We need to figure out where to move the motors and which switch is for which axis
+        //We need to figure out where to move the motors and which switch is for which axis 
             if(digitalRead(LIMIT_SIG_1) == HIGH || NEAR_LIM1 == 1){
                 DisableMotor(1);
                 DisableMotor(2);
@@ -339,7 +337,7 @@ void Azimuth(float mx, float my){
     if (my-YOffset == 0)
         MeasuredAzimuth = (mx-XOffset < 0) ? PI : 0;
     else
-        MeasuredAzimuth = atan2(mx-XOffset, my-YOffset);
+        MeasuredAzimuth = atan2(mx - XOffset, my - YOffset);
 
     MeasuredAzimuth -= DECLINATION * PI / 180;
 
