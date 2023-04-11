@@ -2,7 +2,7 @@
 
 void DS3231_Simple::begin()
 {  
-  Wire.begin();
+  //Wire.begin();
    
   // Setup the clock to make sure that it is running, that the oscillator and 
   // square wave are disabled, and that alarm interrupts are disabled
