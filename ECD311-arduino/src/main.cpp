@@ -28,8 +28,8 @@ DateTime Today_Sunset;
 ACS712 SP_CUR(A0);     // Solar Panel current sensor
 ACS712 BATT_CUR(A1);   // Battery current sensor
 ACS712 LOAD_CUR(A2);   // Load current sensor
-int SP_VOLT = A3;      // Voltage of Solar Panel
-int BATT24_VOLT = A4;  // Voltage of both batteries
+int SP_VOLT = A7;      // Voltage of Solar Panel
+int BATT24_VOLT = A6;  // Voltage of both batteries
 int BATT12_VOLT = A5;  // Voltage of 1st batteries
 int W_SIG = A15;       // Wind Meter (Anenometer)
 // Digital Pins
@@ -285,9 +285,9 @@ void Voltages() {
     // Read the input on analog pin(s)
     // Convert analog readings (which range from 0-1023) to a voltage (0-55V)
     //CHECK
-    PanelVoltage = analogRead(SP_VOLT) * (55 / 1023);             // max 55V
-    BatteryTotalVoltage = analogRead(BATT24_VOLT) * (55 / 1023);  // max 55V
-    BatteryOneVoltage = analogRead(BATT12_VOLT) * (55 / 1023);    // max 55V
+    PanelVoltage = analogRead(SP_VOLT) * (55 / 1024.0);             // max 55V
+    BatteryTotalVoltage = analogRead(BATT24_VOLT) * (55 / 1024.0);  // max 55V
+    BatteryOneVoltage = analogRead(BATT12_VOLT) * (55 / 1024.0);    // max 55V
 }
 
 void Currents() {
