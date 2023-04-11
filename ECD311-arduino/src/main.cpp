@@ -7,11 +7,6 @@
 #include <SparkFunLSM9DS1.h>  // Library for accelerometer and compass
 #include <Wire.h>             // Library for I2C communication
 
-/*
- * FIX ALL PIN LOCATIONS
- * CHECK MOTOR1/MOTOR2/ELEV/AZI
- */
-
 // Non-Pin Setup for Components
 // Pure Inputs
 // Temperature/Humidity Sensor
@@ -59,15 +54,15 @@ int LIMIT_SIG_2 = 47;  // Limit Switch 2(CHECK if elev or Azi)
 int InverterDisable = 30;
 // Global Variables
 // Sensors
-double Temp = 0;
-double Humid = 0;
-double PanelCurrent = 0;
-double BatteryCurrent = 0;
-double LoadCurrent = 0;
-double BatteryTotalVoltage = 0;
-double PanelVoltage = 0;
-double BatteryOneVoltage = 0;
-double WindSpeed = 0;
+double Temp = 0.0;
+double Humid = 0.0;
+double PanelCurrent = 0.0;
+double BatteryCurrent = 0.0;
+double LoadCurrent = 0.0;
+double BatteryTotalVoltage = 0.0;
+double PanelVoltage = 0.0;
+double BatteryOneVoltage = 0.0;
+double WindSpeed = 0.0;
 double MeasuredAzimuth = 0.0;    // AKA Yaw or Heading
 double MeasuredElevation = 0.0;  // AKA Zenith or Pitch
 double MeasuredRoll = 0.0;       // Unused, solar panels don't roll
@@ -158,10 +153,8 @@ void loop() {
 
     // Send Data to Pi
     MyDateAndTime = Clock.read();
-    if (MyDateAndTime.Minute % 2 ==
-        0) {  // Transfer data every 2min CHECK: if this is the desired interval
-        if (PiComm ==
-            0) {  // Prevents data being transferred multiple times in a row
+    if (MyDateAndTime.Minute % 2 == 0) {  // Transfer data every 2min CHECK: if this is the desired interval
+        if (PiComm == 0) {  // Prevents data being transferred multiple times in a row
             TransferPiData();
             ReceivePiData();
             PiComm = 1;
@@ -292,7 +285,6 @@ void Attitude(float ax, float ay, float az, float mx, float my, float mz) {
     MeasuredRoll = atan2(ay, az);
     MeasuredElevation = atan2(-ax, sqrt(ay * ay + az * az));
 
-    MeasuredAzimuth;
     if (my == 0)
         MeasuredAzimuth = (mx < 0) ? PI : 0;
     else
