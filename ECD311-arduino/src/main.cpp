@@ -123,6 +123,7 @@ void ReceivePiData(int suntime);
 
 
 void setup() {
+    TCCR0B = TCCR0B & (B11111000 | B00000010);
     Serial.begin(115200);  // Serial for printing output
     Clock.begin();         // Activate RTC
     /*
@@ -171,8 +172,8 @@ void setup() {
 }
 
 void loop() {
-    //CHECK: Need delay?
-    delay(2000);
+    // CHECK: Need delay?
+    delay(16000);
 
     // Collect Data
     Voltages();
