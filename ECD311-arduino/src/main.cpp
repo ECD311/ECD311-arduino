@@ -34,11 +34,11 @@ int BATT12_VOLT = A5;  // Voltage of 1st batteries
 int W_SIG = A15;       // Wind Meter (Anenometer)
 // Digital Pins
 // Manual Controls for both Motors
-int MANUAL = 2;  // Activates Motor Manual mode
-int M2_EAST = 3;
-int M2_WEST = 4;
-int M1_UP = 5;
-int M1_DN = 6;
+int MANUAL = 19;  // Activates Motor Manual mode
+int M2_EAST = 18;
+int M2_WEST = 17;
+int M1_UP = 16;
+int M1_DN = 15;
 // Motor Driver Inputs
 int M1_PUL = 13;
 int M1_DIR = 12;
@@ -280,6 +280,7 @@ void loop() {
         case 7:  // Angle Towards Sun
             MoveSPElev(ElevationCommand);
             MoveSPAzi(AzimuthCommand);
+            digitalWrite(InverterEnable, HIGH);
     }
     
 }
