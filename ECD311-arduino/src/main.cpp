@@ -3,12 +3,12 @@
 
 #include <Arduino.h>
 #include <DS3231_Simple.h>    // Library for Real Time Clock
-/* //Tracking
+//Tracking
 #include <SPI.h>              // Library for communication (may be unused)
 #include <SparkFunLSM9DS1.h>  // Library for accelerometer and compass
 #include <Wire.h>             // Library for I2C communication
 #include <Adafruit_SHT31.h>  // Library for Temp and Humidity Sensor(SHT30 is compatible)
-*/
+
 // Non-Pin Setup for Components
 // Pure Inputs
 /* //Tracking
@@ -63,13 +63,13 @@ double BatteryTotalVoltage = 0;
 double PanelVoltage = 0;
 double BatteryOneVoltage = 0;
 double WindSpeed = 0;
-/* //Tracking
+ //Tracking
 double MeasuredAzimuth = 0.0;    // AKA Yaw or Heading
 double MeasuredElevation = 0.0;  // AKA Zenith or Pitch
 double MeasuredRoll = 0.0;       // Unused, solar panels don't roll
 double Temp = 0;
 double Humid = 0;
-*/
+
 // Motors
 int M1Running = 0;
 int M2Running = 0;
@@ -89,13 +89,13 @@ int NEAR_LIM2 = 0;
 */
 // Data Transfer
 int PiComm = 0;
-/* //Tracking
+ //Tracking
 int SunriseAzimuth = 0;
 int SunriseElevation = 0;
 int morning_lockout = 0;
 int AzimuthCommand = 0;
 int ElevationCommand = 0;
-*/
+
 // Definitions
 /* //Tracking
 #define ElevRange 5.0
