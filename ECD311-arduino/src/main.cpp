@@ -38,10 +38,10 @@ int BATT12_VOLT = A5;  // Voltage of 1st batteries
 int W_SIG = A15;       // Wind Meter (Anenometer)
 // Digital Pins
 // Manual Controls for both Motors
-int MANUAL = 19;  // Activates Motor Manual mode
-int M2_EAST = 18;
-int M2_WEST = 17;
-int M1_UP = 16;
+int MANUAL = 18;  // Activates Motor Manual mode
+int M2_EAST = 17;
+int M2_WEST = 16;
+int M1_UP = 14;
 int M1_DN = 15;
 // Motor Driver Inputs
 int M1_PUL = 13;
