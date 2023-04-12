@@ -491,7 +491,9 @@ void CheckLimitSwitches() {
 
 void TransferPiData() {
     char system_status[25];
-    if (State == 1) {
+    if (State == 0){
+        sprintf(system_status, "Manual");
+    } else if (State == 1) {
         sprintf(system_status, "Maintenance");
     } else if (State == 2) {
         sprintf(system_status, "High Wind");
@@ -506,7 +508,7 @@ void TransferPiData() {
     }
 
     char AzimMode[25];
-    if (State == 0) {
+    if (State != 0) {
         sprintf(AzimMode, "Automatic");
     } else {
         sprintf(AzimMode, "Manual");
@@ -515,16 +517,16 @@ void TransferPiData() {
     char AzimStatus[25];
     if (M1Running == 1) {
         if (digitalRead(M1_DIR)) {
-            sprintf(AzimStatus, "CCW");
+            sprintf(AzimStatus, "CCW"); // "WEST"
         } else {
-            sprintf(AzimStatus, "CW");
+            sprintf(AzimStatus, "CW"); // "EAST"
         }
     } else {
         sprintf(AzimStatus, "OFF");
     }
 
     char ElevMode[25];
-    if (State == 0) {
+    if (State != 0) {
         sprintf(ElevMode, "Automatic");
     } else {
         sprintf(ElevMode, "Manual");
@@ -532,9 +534,9 @@ void TransferPiData() {
     char ElevStatus[25];
     if (M2Running == 1) {
         if (digitalRead(M2_DIR)) {
-            sprintf(ElevStatus, "CCW");
+            sprintf(ElevStatus, "UP"); // prev "CCW"
         } else {
-            sprintf(ElevStatus, "CW");
+            sprintf(ElevStatus, "DOWN"); // prev "CW"
         }
     } else {
         sprintf(ElevStatus, "OFF");
