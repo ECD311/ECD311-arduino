@@ -141,10 +141,10 @@ void ReceivePiData(int suntime);
 void setup() {
     TCCR0B = TCCR0B & (B11111000 | B00000010);
     Serial.begin(115200);  // Serial for printing output
-    /* //Tracking
+     //Tracking
     Wire.begin();
     //Wire.setClock(56000);
-    */
+    
     Clock.begin();  // Activate RTC
     /*
      * NOTE ON RTC:
@@ -241,7 +241,7 @@ void loop() {
     //CheckLimitSwitches(); //CHECK vals //Tracking
 
     //Non-Tracking Behavior
-    if (digitalRead(MANUAL) == HIGH){
+    if (digitalRead(MANUAL) == LOW){
         ManualControl();
         State = 0;
     }else if (BatteryTotalVoltage < 24.4) {
@@ -466,11 +466,15 @@ void ManualControl() {
         EnableMotor(2, 1);
     } else if (digitalRead(M1_DN) == LOW) {
         EnableMotor(2, 2);
+    } else {
+        DisableMotor(2);
     }
     if (digitalRead(M2_EAST) == LOW) {
         EnableMotor(1, 1);
     } else if (digitalRead(M2_WEST) == LOW) {
         EnableMotor(1, 2);
+    } else {
+        DisableMotor(1);
     }
 }
 /* //Tracking
