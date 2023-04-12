@@ -1,3 +1,9 @@
+//#####################################################
+//# Watson Capstone Projects
+//# Team ECD311 - Solar Tracking Project
+//# Team Members - Carson Singh, Selman Oguz, Adam Young, Bea Mulvey
+//#####################################################
+
 // Libraries
 #include <ACS712.h>  // Library for current sensors
 #include <Adafruit_SHT31.h>  // Library for Temp and Humidity Sensor(SHT30 is compatible)
