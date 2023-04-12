@@ -330,9 +330,9 @@ void Voltages() {
 
 void Currents() {
     // Get current measurements
-    PanelCurrent = SP_CUR.mA_DC() / 1000.0;
-    BatteryCurrent = BATT_CUR.mA_DC() / 1000.0;
-    LoadCurrent = LOAD_CUR.mA_DC() / 1000.0;
+    PanelCurrent = abs(SP_CUR.mA_DC() / 1000.0);
+    BatteryCurrent = abs(BATT_CUR.mA_DC() / 1000.0);
+    LoadCurrent = (LOAD_CUR.mA_DC() / 1000.0);
 }
 
 /* //Tracking
