@@ -332,7 +332,7 @@ void Currents() {
     // Get current measurements
     PanelCurrent = abs(SP_CUR.mA_DC() / 1000.0);
     BatteryCurrent = abs(BATT_CUR.mA_DC() / 1000.0);
-    LoadCurrent = (LOAD_CUR.mA_DC() / 1000.0);
+    LoadCurrent = abs(LOAD_CUR.mA_DC() / 1000.0);
 }
 
 /* //Tracking
