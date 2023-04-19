@@ -1,14 +1,24 @@
+//#####################################################
+//# Watson Capstone Projects
+//# Team ECD311 - Solar Tracking Project
+//# Team Members - Carson Singh, Selman Oguz, Adam Young, Bea Mulvey
+//#####################################################
+
+/*
+* This is the non tracking version of the code
+* All code used for tracking is commented out and labelled with '//Tracking'
+*/
+
 // Libraries
 #include <ACS712.h>  // Library for current sensors
-
 #include <Arduino.h>
 #include <DS3231_Simple.h>    // Library for Real Time Clock
-//Tracking
+/* //Tracking
 #include <SPI.h>              // Library for communication (may be unused)
 #include <SparkFunLSM9DS1.h>  // Library for accelerometer and compass
 #include <Wire.h>             // Library for I2C communication
 #include <Adafruit_SHT31.h>  // Library for Temp and Humidity Sensor(SHT30 is compatible)
-
+*/
 // Non-Pin Setup for Components
 // Pure Inputs
 /* //Tracking
@@ -38,10 +48,10 @@ int BATT12_VOLT = A5;  // Voltage of 1st batteries
 int W_SIG = A15;       // Wind Meter (Anenometer)
 // Digital Pins
 // Manual Controls for both Motors
-int MANUAL = 18;  // Activates Motor Manual mode
-int M2_EAST = 17;
-int M2_WEST = 16;
-int M1_UP = 14;
+int MANUAL = 19;  // Activates Motor Manual mode
+int M2_EAST = 18;
+int M2_WEST = 17;
+int M1_UP = 16;
 int M1_DN = 15;
 // Motor Driver Inputs
 int M1_PUL = 13;
@@ -63,13 +73,13 @@ double BatteryTotalVoltage = 0;
 double PanelVoltage = 0;
 double BatteryOneVoltage = 0;
 double WindSpeed = 0;
- //Tracking
+/* //Tracking
 double MeasuredAzimuth = 0.0;    // AKA Yaw or Heading
 double MeasuredElevation = 0.0;  // AKA Zenith or Pitch
 double MeasuredRoll = 0.0;       // Unused, solar panels don't roll
 double Temp = 0;
 double Humid = 0;
-
+*/
 // Motors
 int M1Running = 0;
 int M2Running = 0;
@@ -89,13 +99,13 @@ int NEAR_LIM2 = 0;
 */
 // Data Transfer
 int PiComm = 0;
- //Tracking
+/* //Tracking
 int SunriseAzimuth = 0;
 int SunriseElevation = 0;
 int morning_lockout = 0;
 int AzimuthCommand = 0;
 int ElevationCommand = 0;
-
+*/
 // Definitions
 /* //Tracking
 #define ElevRange 5.0
@@ -141,10 +151,10 @@ void ReceivePiData(int suntime);
 void setup() {
     TCCR0B = TCCR0B & (B11111000 | B00000010);
     Serial.begin(115200);  // Serial for printing output
-     //Tracking
+    /* //Tracking
     Wire.begin();
-    //Wire.setClock(56000);
-    
+    //Wire.setClock(56000); //Slow I2C speed for greater range
+    */
     Clock.begin();  // Activate RTC
     /*
      * NOTE ON RTC:
@@ -194,7 +204,6 @@ void setup() {
 }
 
 void loop() {
-    // CHECK: Need delay?
     delay(16000);
 
     // Collect Data
@@ -241,7 +250,7 @@ void loop() {
     //CheckLimitSwitches(); //CHECK vals //Tracking
 
     //Non-Tracking Behavior
-    if (digitalRead(MANUAL) == LOW){
+    if (digitalRead(MANUAL) == HIGH){
         ManualControl();
         State = 0;
     }else if (BatteryTotalVoltage < 24.4) {
@@ -319,10 +328,9 @@ void loop() {
     */
 }
 
+//Taken from 2018 Code
 void Voltages() {
-    // Read the input on analog pin(s)
     // Convert analog readings (which range from 0-1023) to a voltage (0-55V)
-    //CHECK
     PanelVoltage = analogRead(SP_VOLT) * (55 / 1024.0);             // max 55V
     BatteryTotalVoltage = analogRead(BATT24_VOLT) * (55 / 1024.0);  // max 55V
     BatteryOneVoltage = analogRead(BATT12_VOLT) * (55 / 1024.0);    // max 55V
@@ -330,9 +338,9 @@ void Voltages() {
 
 void Currents() {
     // Get current measurements
-    PanelCurrent = abs(SP_CUR.mA_DC() / 1000.0);
-    BatteryCurrent = abs(BATT_CUR.mA_DC() / 1000.0);
-    LoadCurrent = abs(LOAD_CUR.mA_DC() / 1000.0);
+    PanelCurrent = SP_CUR.mA_DC() / 1000.0;
+    BatteryCurrent = BATT_CUR.mA_DC() / 1000.0;
+    LoadCurrent = LOAD_CUR.mA_DC() / 1000.0;
 }
 
 /* //Tracking
@@ -342,10 +350,8 @@ void TempAndHumid() {
 }
 */
 
+//Taken from 2018 Code
 void Wind() {
-    // Taken from old code, must test
-    //  Read the input on analog pin A15
-    //CHECK
     float sensorValue15 = (analogRead(W_SIG) * (5.0 / 1023.0));
     if (sensorValue15 < 0.4) {
         WindSpeed = 0;
@@ -419,10 +425,7 @@ void MoveSPAzi(float Azi) {
 }
 */
 
-/*
- * Motor functions taken from 2018 code
- */
-// Enable Motor Rotation
+//Taken from 2018 Code
 void EnableMotor(int MotorNumber, int Direction) {
     if (MotorNumber == 1 && M1Running == 0) {
         if (Direction == 1) {
@@ -447,7 +450,8 @@ void EnableMotor(int MotorNumber, int Direction) {
         M2Running = M2Running;
     }
 }
-// Disable Motor Rotation
+
+//Taken from 2018 Code
 void DisableMotor(int MotorNumber) {
     if (MotorNumber == 1 && M1Running == 1) {
         digitalWrite(M1_PUL, LOW);
@@ -461,20 +465,17 @@ void DisableMotor(int MotorNumber) {
     }
 }
 
+
 void ManualControl() {
     if (digitalRead(M1_UP) == LOW) {
         EnableMotor(2, 1);
     } else if (digitalRead(M1_DN) == LOW) {
         EnableMotor(2, 2);
-    } else {
-        DisableMotor(2);
     }
     if (digitalRead(M2_EAST) == LOW) {
         EnableMotor(1, 1);
     } else if (digitalRead(M2_WEST) == LOW) {
         EnableMotor(1, 2);
-    } else {
-        DisableMotor(1);
     }
 }
 /* //Tracking
@@ -495,9 +496,7 @@ void CheckLimitSwitches() {
 
 void TransferPiData() {
     char system_status[25];
-    if (State == 0){
-        sprintf(system_status, "Manual");
-    } else if (State == 1) {
+    if (State == 1) {
         sprintf(system_status, "Maintenance");
     } else if (State == 2) {
         sprintf(system_status, "High Wind");
@@ -512,7 +511,7 @@ void TransferPiData() {
     }
 
     char AzimMode[25];
-    if (State != 0) {
+    if (State == 0) {
         sprintf(AzimMode, "Automatic");
     } else {
         sprintf(AzimMode, "Manual");
@@ -521,16 +520,16 @@ void TransferPiData() {
     char AzimStatus[25];
     if (M1Running == 1) {
         if (digitalRead(M1_DIR)) {
-            sprintf(AzimStatus, "CCW"); // "WEST"
+            sprintf(AzimStatus, "CCW");
         } else {
-            sprintf(AzimStatus, "CW"); // "EAST"
+            sprintf(AzimStatus, "CW");
         }
     } else {
         sprintf(AzimStatus, "OFF");
     }
 
     char ElevMode[25];
-    if (State != 0) {
+    if (State == 0) {
         sprintf(ElevMode, "Automatic");
     } else {
         sprintf(ElevMode, "Manual");
@@ -538,9 +537,9 @@ void TransferPiData() {
     char ElevStatus[25];
     if (M2Running == 1) {
         if (digitalRead(M2_DIR)) {
-            sprintf(ElevStatus, "UP"); // prev "CCW"
+            sprintf(ElevStatus, "CCW");
         } else {
-            sprintf(ElevStatus, "DOWN"); // prev "CW"
+            sprintf(ElevStatus, "CW");
         }
     } else {
         sprintf(ElevStatus, "OFF");
