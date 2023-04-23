@@ -7,16 +7,20 @@
 //#####################################################
 
 /*
-* NOTE: This code must be built and uploaded to the arduino with Platform.io
+* NOTE: This code must be built and uploaded to the arduino with PlatformIO
+* PlatformIO is a extension available for VSCode
 * This code should have come in a ZIP file with all the necessary parts needed to build
 * This is needed due to the RaspPi-Arduino communication section of the code
-* The function sprintf() does not allow for floats in the arduino IDE, but it does for Platform.io
+* The function sprintf() does not allow for floats in the arduino IDE, but it does for PlatformIO
 */
 
 /*
 * This is the non tracking version of the code
 * All code used for tracking is commented out and labelled with '//Tracking'
 */
+
+// all times used here are in UTC - previously we used local time but
+// daylight savings would cause issues with sunrise and sunset so we aren't touching time zones at all anymore
 
 // Libraries
 #include <ACS712.h>  // Library for current sensors
@@ -157,11 +161,13 @@ void ReceivePiData(int suntime);
 
 
 void setup() {
-    TCCR0B = TCCR0B & (B11111000 | B00000010);
+    // set timer 2 divider to give a PWM frequency of approximately 8 KHz (roughly 8x faster than default)
+    // from http://domoticx.com/arduino-pwm-frequency-and-timers/
+    TCCR0B = TCCR0B & (B11111000 | B00000010); 
     Serial.begin(115200);  // Serial for printing output
     //Tracking
-    Wire.begin();
-    //Wire.setClock(56000); //Slow I2C speed for greater range
+    Wire.begin(); // this line is normally not necessary, it has been added because it has been removed from the RTC initialization due to it resetting the I2C clock speed
+    //Wire.setClock(56000); //Decrease I2C speed as an attempt to reduce the effects of capacitance on the signal
     
     Clock.begin();  // Activate RTC
     /*
@@ -170,9 +176,6 @@ void setup() {
      * The date and time can be changed via the 'SetDateTime' example that comes
      * with the 'clock' library
      */
-
-    // while (Serial.readStringUntil('\n') != "start")
-    //     ;
 
     // Set Pin Modes
     //Pullup inputs are for switch controls
@@ -212,7 +215,9 @@ void setup() {
 }
 
 void loop() {
-    delay(16000);
+    // timer 0 is also used for the delay function, so this should be set to ~8x the desired delay
+    // in this case, that delay is 2000 ms so we use 16,000 ms
+    delay(16000); 
 
     // Collect Data
     Voltages();
@@ -226,16 +231,15 @@ void loop() {
     RollElevation(Accel.ax, Accel.ay, Accel.az);
     */
 
-    // Determine Current Time
+    // read current time from RTC
     MyDateAndTime = Clock.read();
 
     // Send Data to Pi
     // send data every loop ( 2 seconds )
-    //if (MyDateAndTime.Second % 2 == 0){
+    // if using less of a loop delay, could do something similar to the lockout used when getting times and positions for the day
     TransferPiData();
-    //}
 
-    if ((MyDateAndTime.Hour == 6) && (MyDateAndTime.Minute == 0)) {
+    if ((MyDateAndTime.Hour == 6) && (MyDateAndTime.Minute == 0)) { // this is 0600 UTC, not EST
         if (!morning_lockout) {
             // get sunrise/sunset times & positions for the day
             ReceivePiData(1);
@@ -259,12 +263,15 @@ void loop() {
 
     //Non-Tracking Behavior
     if (digitalRead(MANUAL) == LOW){
+        // if the manual switch is held, put the system into manual mode so the motors can be controlled
         ManualControl();
         State = 0;
     }else if (BatteryTotalVoltage < 24.4) {
+        // the batteries are at ~20% capacity, so disable the inverter as it is the largest power draw
         digitalWrite(InverterEnable, LOW);
         State = 2;
     }else{
+        // everything is working!
         digitalWrite(InverterEnable, HIGH);
         State = 7;
     }
@@ -339,13 +346,15 @@ void loop() {
 //Taken from 2018 Code
 void Voltages() {
     // Convert analog readings (which range from 0-1023) to a voltage (0-55V)
+    // outside of the AC output of the inverter, the highest voltage present should never be higher than ~28V
     PanelVoltage = analogRead(SP_VOLT) * (55 / 1024.0);             // max 55V
     BatteryTotalVoltage = analogRead(BATT24_VOLT) * (55 / 1024.0);  // max 55V
     BatteryOneVoltage = analogRead(BATT12_VOLT) * (55 / 1024.0);    // max 55V
 }
 
 void Currents() {
-    // Get current measurements
+    // Get current measurements and convert into amps
+    // we aren't using the direction of current flow, so just wrap all 3 in an abs() call
     PanelCurrent = abs(SP_CUR.mA_DC() / 1000.0);
     BatteryCurrent = abs(BATT_CUR.mA_DC() / 1000.0);
     LoadCurrent = abs(LOAD_CUR.mA_DC() / 1000.0);
@@ -360,11 +369,13 @@ void TempAndHumid() {
 
 //Taken from 2018 Code
 void Wind() {
-    float sensorValue15 = (analogRead(W_SIG) * (5.0 / 1023.0));
-    if (sensorValue15 < 0.4) {
-        WindSpeed = 0;
+    float sensorValue15 = (analogRead(W_SIG) * (5.0 / 1023.0)); // voltage = raw value * (Vmax / 2^10 - 1)
+    if (sensorValue15 < 0.4) { // the minimum output voltage of the anemometer is 0.4V; 
+        WindSpeed = 0; //anything below that is undefined. in this case we are treating that as having no wind
     } else {
         WindSpeed = (sensorValue15 - 0.4) * (32.4 / (2.0 - 0.4));
+        // anemometer max output voltage is 2.0V at a wind speed of 32.4 m/s, so speed in m/s is
+        // defined by (voltage - Vmin) * ((32.4 m/s)/(Vmax-Vmin)) with a maximum possible value of 32.4 m/s
     }
 }
 
@@ -435,6 +446,7 @@ void MoveSPAzi(float Azi) {
 
 //Taken from 2018 Code
 void EnableMotor(int MotorNumber, int Direction) {
+    // only start PWM signal if the motor is not running already
     if (MotorNumber == 1 && M1Running == 0) {
         if (Direction == 1) {
             digitalWrite(M1_DIR, LOW);
@@ -454,6 +466,7 @@ void EnableMotor(int MotorNumber, int Direction) {
         analogWrite(M2_PUL, 127);
         M2Running = 1;
     } else {
+        // keep the current state of the motor
         M1Running = M1Running;
         M2Running = M2Running;
     }
@@ -461,6 +474,7 @@ void EnableMotor(int MotorNumber, int Direction) {
 
 //Taken from 2018 Code
 void DisableMotor(int MotorNumber) {
+    // only disable a motor that is already running
     if (MotorNumber == 1 && M1Running == 1) {
         digitalWrite(M1_PUL, LOW);
         M1Running = 0;
@@ -468,6 +482,7 @@ void DisableMotor(int MotorNumber) {
         digitalWrite(M2_PUL, LOW);
         M2Running = 0;
     } else {
+        // keep the current state of the motor
         M1Running = M1Running;
         M2Running = M2Running;
     }
@@ -507,6 +522,7 @@ void CheckLimitSwitches() {
 */
 
 void TransferPiData() {
+    // write representations of relevant variables into strings
     char system_status[25];
     if (State == 0){
         sprintf(system_status, "Manual");
@@ -561,16 +577,22 @@ void TransferPiData() {
     char date_time[64];
     DateTime current_time;
     current_time = Clock.read();
+    // write the current date and time into a string
     sprintf(date_time, "20%02i_%02i_%02i_%02i_%02i_%02i", current_time.Year,
             current_time.Month, current_time.Day, current_time.Hour,
             current_time.Minute, current_time.Second);
 
-            // single bit difference btwn bcd 33 and bcd 23 @ bit 4
-            // 2 bits diff btwn bcd 03 and bcd 33 @ bits 4 and 5
-
-    // sprintf(date_time, "2022-02-20_02:55:32");
     Serial.println("LOG");
     char buffer[1024];
+    // write all relevant variables into a string representation of a python dictionary
+    // this used to be 23 separate println() calls along with 23 serial reads on the raspberry pi
+    // it is now a single println() call and a single serial read, along with an ast.literal_eval() call 
+    // to convert it to a dictionary
+
+    // this function is why we are using PlatformIO - many of the logged variables are floats
+    // and the implementation of sprintf provided in the arduino ide does not support floats
+    // but PlatformIO provides an option to compile with a more fully featured version of sprintf that supports floats
+    // this does come at the cost of higher memory usage, but the mega2560 has enough that this has not caused any issues
     sprintf(
         buffer,
         "{'Date_Time': '%s', 'System_Status': '%s', 'Solar_Panel_Voltage': '%f', "
@@ -583,17 +605,22 @@ void TransferPiData() {
         "'Azimuth_Motor_Mode': '%s', 'Azimuth_Motor_Status': '%s', "
         "'Elevation_Reading': '%f', 'Elevation_Command': '%i', "
         "'Elevation_Motor_Mode': '%s', 'Elevation_Motor_Status': '%s'}",
-        date_time, system_status, PanelVoltage, PanelCurrent,
-        PanelVoltage * PanelCurrent, BatteryOneVoltage,
-        BatteryTotalVoltage - BatteryOneVoltage, BatteryTotalVoltage,
-        BatteryTotalVoltage * BatteryCurrent, BatteryTotalVoltage, LoadCurrent,
-        BatteryTotalVoltage * LoadCurrent, WindSpeed, Temp, Humid,
-        MeasuredAzimuth, AzimuthCommand, AzimMode, AzimStatus,
-        MeasuredElevation, ElevationCommand, ElevMode, ElevStatus);
+        date_time, system_status, PanelVoltage, 
+        PanelCurrent, PanelVoltage * PanelCurrent,
+        BatteryOneVoltage, BatteryTotalVoltage - BatteryOneVoltage, 
+        BatteryTotalVoltage, BatteryTotalVoltage * BatteryCurrent, 
+        BatteryTotalVoltage, LoadCurrent, BatteryTotalVoltage * LoadCurrent, 
+        WindSpeed, Temp, 
+        Humid, MeasuredAzimuth, AzimuthCommand, 
+        AzimMode, AzimStatus,
+        MeasuredElevation, ElevationCommand, 
+        ElevMode, ElevStatus);
     Serial.println(buffer);
 }
 
 void ReceivePiData(int suntime) {
+    // always get the current position of the sun, 
+    // and optionally get today's sunrise and sunset times
     int AziBuffer;
     int ElevBuffer;
     Serial.println("new_position");
@@ -601,7 +628,9 @@ void ReceivePiData(int suntime) {
     ElevBuffer = Serial.readStringUntil('\n').toInt();
     AzimuthCommand = AziBuffer;
     ElevationCommand = ElevBuffer;
-    if (suntime == 1) {  // CHANGE
+    // only request new sunrise/sunset times if requested,
+    // since it is only needed at startup and once a day in the morning
+    if (suntime == 1) {
         Serial.println("new_times");
         String today_sunrise;
         String today_sunset;
@@ -615,7 +644,8 @@ void ReceivePiData(int suntime) {
         today_sunset.trim();
         SunriseAzimuth = sunrise_azimuth;
         SunriseElevation = sunrise_elevation;
-        //  actually receive data from raspi, sunrise then sunset in HH:MM:SS
+        // base the sunrise and sunset objects off of the current datetime object
+        // then only replace the HH:MM:SS with the received data since it's only valid for today
         Today_Sunrise = MyDateAndTime;
         Today_Sunrise.Hour = today_sunrise.substring(6, 7).toInt();
         Today_Sunrise.Minute = today_sunrise.substring(3, 4).toInt();
