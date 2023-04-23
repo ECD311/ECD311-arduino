@@ -23,14 +23,13 @@
 // daylight savings would cause issues with sunrise and sunset so we aren't touching time zones at all anymore
 
 // Libraries
-#include <ACS712.h>  // Library for current sensors
-#include <Arduino.h>
-#include <DS3231_Simple.h>    // Library for Real Time Clock
+#include <ACS712.h>  // current sensor library - ref @ github:rkoptev/ACS712-arduino
+#include <Arduino.h> // PlatformIO arduino core
+#include <DS3231_Simple.h>    // RTC driver - ref @ github:sleemanj/DS3231_Simple
 /* //Tracking
-#include <SPI.h>              // Library for communication (may be unused)
-#include <SparkFunLSM9DS1.h>  // Library for accelerometer and compass
+#include <SparkFunLSM9DS1.h>  // 9DOF IMU driver - ref @ github:sparkfun/SparkFun_LSM9DS1_Arduino_library
 #include <Wire.h>             // Library for I2C communication
-#include <Adafruit_SHT31.h>  // Library for Temp and Humidity Sensor(SHT30 is compatible)
+#include <Adafruit_SHT31.h>  // SHT3x driver - ref @ github:adafruit/Adafruit_SHT31
 */
 // Non-Pin Setup for Components
 // Pure Inputs
